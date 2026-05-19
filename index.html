@@ -1,0 +1,2452 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#00693e">
+    <title>Suivi Dechets - AGRIWATT</title>
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --agw-green: #00693e;
+            --agw-green-dark: #004d2d;
+            --agw-green-light: #2a9d6c;
+            --agw-bg: #f8f9fa;
+        }
+
+        body {
+            background: var(--agw-bg);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            padding-bottom: 90px; /* espace pour la bottom nav */
+        }
+
+        .bg-primary { background-color: var(--agw-green) !important; }
+        .btn-primary { background-color: var(--agw-green); border-color: var(--agw-green); }
+        .btn-primary:hover { background-color: var(--agw-green-dark); border-color: var(--agw-green-dark); }
+        .text-primary { color: var(--agw-green) !important; }
+        .border-primary { border-color: var(--agw-green) !important; }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+
+        .card-header {
+            background: var(--agw-green);
+            color: #fff;
+            font-weight: 600;
+            border-top-left-radius: 12px !important;
+            border-top-right-radius: 12px !important;
+        }
+
+        .kpi-card {
+            border-left: 4px solid var(--agw-green);
+            padding: 14px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.05);
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--agw-green);
+            line-height: 1;
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .badge-danger-dechet {
+            background: #dc3545;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+
+        .badge-low {
+            font-family: 'Courier New', monospace;
+            background: #e9ecef;
+            color: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .table thead th {
+            background: var(--agw-green);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border: none;
+        }
+
+        .table tbody tr:hover { background: #f0f7f3; }
+
+        .form-section-title {
+            color: var(--agw-green);
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 2px solid var(--agw-green);
+            padding-bottom: 6px;
+            margin-bottom: 14px;
+        }
+
+        .required-bsd input.form-control {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, .15);
+        }
+
+        .required-mark { color: #dc3545; font-weight: 700; }
+
+        /* Mobile bottom nav (identique a suivivmc) */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #ddd;
+            z-index: 1000;
+            padding: 6px 0;
+            justify-content: space-around;
+            box-shadow: 0 -2px 8px rgba(0,0,0,.08);
+        }
+
+        .bottom-nav-item {
+            flex: 1;
+            text-align: center;
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 0.7rem;
+            padding: 4px 2px;
+        }
+
+        .bottom-nav-item.active { color: var(--agw-green); font-weight: 600; }
+        .bottom-nav-icon { font-size: 1.2rem; display: block; }
+
+        .bottom-nav-fab .bottom-nav-fab-btn {
+            display: inline-flex;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--agw-green);
+            color: #fff;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: -16px auto 2px;
+            box-shadow: 0 3px 8px rgba(0,105,62,.4);
+        }
+
+        @media (max-width: 992px) {
+            .mobile-bottom-nav { display: flex; }
+            body { padding-bottom: 80px; }
+        }
+
+        .navbar-brand-logo {
+            width: 32px;
+            height: 32px;
+            margin-right: 8px;
+            background: #fff;
+            border-radius: 6px;
+            padding: 4px;
+            object-fit: contain;
+        }
+
+        /* Tabs config */
+        .nav-tabs .nav-link.active {
+            background: var(--agw-green);
+            color: #fff;
+            border-color: var(--agw-green);
+        }
+        .nav-tabs .nav-link { color: var(--agw-green); }
+
+        /* Photo preview */
+        .photo-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            margin-top: 8px;
+        }
+
+        /* Filtres */
+        .filter-bar {
+            background: #fff;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.05);
+        }
+
+        /* Loading */
+        .spinner-border { color: var(--agw-green); }
+
+        /* Print PDF helpers */
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="#dashboard" data-page="dashboard">
+                <span style="display:inline-block;width:32px;height:32px;background:#fff;border-radius:6px;padding:2px;margin-right:8px;color:var(--agw-green);font-weight:700;text-align:center;line-height:28px;">DEC</span>
+                <span class="fw-bold">Suivi Dechets</span>
+            </a>
+            <a href="#enlevement-new" class="btn btn-warning btn-sm fw-bold ms-2 d-flex align-items-center" id="btn-nav-new" data-page="enlevement-new">
+                <span class="me-1" style="font-size:1.1em">&#x2795;</span><span>Nouvel enlevement</span>
+            </a>
+            <button class="navbar-toggler ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#dashboard" data-page="dashboard">
+                            &#x1F4CA; Tableau de bord
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#enlevement-list" data-page="enlevement-list">
+                            &#x1F4CB; Registre
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#config" data-page="config">
+                            &#x2699;&#xFE0F; Parametres
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Permission/connection bar -->
+    <div id="permission-bar"></div>
+
+    <!-- Main content area -->
+    <main id="app-content" class="container-fluid py-3">
+        <div id="loading-screen" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2 text-muted">Chargement de l'application...</p>
+        </div>
+    </main>
+
+    <!-- Mobile bottom navigation -->
+    <nav class="mobile-bottom-nav" id="mobile-nav">
+        <a href="#dashboard" class="bottom-nav-item" data-page="dashboard">
+            <span class="bottom-nav-icon">&#x1F4CA;</span>
+            <span class="bottom-nav-label">Tableau</span>
+        </a>
+        <a href="#enlevement-list" class="bottom-nav-item" data-page="enlevement-list">
+            <span class="bottom-nav-icon">&#x1F4CB;</span>
+            <span class="bottom-nav-label">Registre</span>
+        </a>
+        <a href="#enlevement-new" class="bottom-nav-item bottom-nav-fab" data-page="enlevement-new">
+            <div class="bottom-nav-fab-btn">&#x2795;</div>
+            <span class="bottom-nav-label">Nouveau</span>
+        </a>
+        <a href="#config" class="bottom-nav-item" data-page="config">
+            <span class="bottom-nav-icon">&#x2699;&#xFE0F;</span>
+            <span class="bottom-nav-label">Reglages</span>
+        </a>
+    </nav>
+
+    <!-- Toast container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index:2000"></div>
+
+    <!-- Diagnostic timeout -->
+    <script>
+    (function() {
+        var timer = setTimeout(function() {
+            var el = document.getElementById('loading-screen');
+            if (!el) return;
+            el.innerHTML =
+                '<div class="alert alert-danger text-start mx-auto" style="max-width:500px">' +
+                '<h5>&#x26A0;&#xFE0F; Erreur de chargement</h5>' +
+                '<p>L\'application n\'a pas pu demarrer correctement.</p>' +
+                '<p class="small text-muted">Essayez de recharger la page (Ctrl+F5).</p>' +
+                '</div>';
+        }, 10000);
+        window._appLoaded = function() { clearTimeout(timer); };
+    })();
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- LIBRAIRIES CDN                                                -->
+    <!-- ============================================================= -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.7.1/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.28.1/js/msal-browser.min.js"></script>
+
+    <!-- ============================================================= -->
+    <!-- LOGO INLINE (base64)                                          -->
+    <!-- ============================================================= -->
+    <script>
+    const _LOGO_BASE64 = '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';
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- LOGO MODULE                                                   -->
+    <!-- ============================================================= -->
+    <script>
+    const AppLogo = {
+        _cache: null,
+        getBase64() {
+            if (this._cache) return Promise.resolve(this._cache);
+            if (typeof _LOGO_BASE64 !== 'undefined' && _LOGO_BASE64) {
+                this._cache = 'data:image/png;base64,' + _LOGO_BASE64;
+                return Promise.resolve(this._cache);
+            }
+            return Promise.resolve(null);
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- DB (Dexie / IndexedDB)                                        -->
+    <!-- ============================================================= -->
+    <script>
+    const db = new Dexie('SuiviDechets');
+
+    db.version(1).stores({
+        enlevements:   '++id, date, siteId, typeDechetId, prestataireId, numeroBsd',
+        types_dechets: '++id, codeLow, designation, dangereux',
+        prestataires:  '++id, nom, siret',
+        sites:         '++id, nom, type',
+        utilisateurs:  'id, nom, agence',
+        config:        'id'
+    });
+
+    /* ---------- Seed donnees ---------- */
+    const SEED_TYPES_DECHETS = [
+        { id: 1,  codeLow: '20 03 01',  designation: 'Dechets municipaux en melange (DIB / OM)',                       dangereux: false },
+        { id: 2,  codeLow: '15 01 01',  designation: 'Emballages en papier/carton',                                    dangereux: false },
+        { id: 3,  codeLow: '15 01 02',  designation: 'Emballages plastiques',                                          dangereux: false },
+        { id: 4,  codeLow: '17 04 05',  designation: 'Fer et acier (ferrailles)',                                      dangereux: false },
+        { id: 5,  codeLow: '17 04 11',  designation: 'Cables electriques (autres que ceux du 17 04 10)',               dangereux: false },
+        { id: 6,  codeLow: '16 02 14',  designation: 'Equipements mis au rebut (DEEE non dangereux)',                  dangereux: false },
+        { id: 7,  codeLow: '16 02 13*', designation: 'Equipements mis au rebut contenant des composants dangereux',    dangereux: true  },
+        { id: 8,  codeLow: '16 05 04*', designation: 'Aerosols pressurises usages / produits chimiques en contenants', dangereux: true  },
+        { id: 9,  codeLow: '13 02 05*', designation: 'Huiles moteur usagees',                                          dangereux: true  },
+        { id: 10, codeLow: '15 02 02*', designation: 'Chiffons / absorbants souilles par produits dangereux',          dangereux: true  },
+        { id: 11, codeLow: '20 01 33*', designation: 'Piles et accumulateurs',                                         dangereux: true  },
+        { id: 12, codeLow: '17 09 03*', designation: 'Dechets de construction contenant substances dangereuses',       dangereux: true  }
+    ];
+
+    const SEED_PRESTATAIRES = [
+        { id: 1, nom: 'Good Collect',       siret: '', email: '', telephone: '' },
+        { id: 2, nom: 'Geode Environnement', siret: '', email: '', telephone: '' }
+    ];
+
+    const SEED_SITES = [
+        { id: 1, nom: 'Seclin',                   adresse: '', type: 'agence' },
+        { id: 2, nom: 'Vervins',                  adresse: '', type: 'agence' },
+        { id: 3, nom: 'Bouxieres-sous-Froidmont', adresse: '', type: 'agence' },
+        { id: 4, nom: 'Bailly-Romainvilliers',    adresse: '', type: 'agence' }
+    ];
+
+    async function ensureSeed() {
+        if ((await db.types_dechets.count()) === 0) {
+            await db.types_dechets.bulkPut(SEED_TYPES_DECHETS);
+            console.log('Seed: types de dechets charges');
+        }
+        if ((await db.prestataires.count()) === 0) {
+            await db.prestataires.bulkPut(SEED_PRESTATAIRES);
+            console.log('Seed: prestataires charges');
+        }
+        if ((await db.sites.count()) === 0) {
+            await db.sites.bulkPut(SEED_SITES);
+            console.log('Seed: sites charges');
+        }
+        const entreprise = await db.config.get('entreprise');
+        if (!entreprise) {
+            await db.config.put({
+                id: 'entreprise',
+                value: { nom: 'AGRIWATT', adresse: '', telephone: '', email: '' }
+            });
+        }
+    }
+
+    /* ---------- Couche d'acces DB ---------- */
+    const DB = {
+        async getConfig(key) {
+            const row = await db.config.get(key);
+            return row?.value ?? null;
+        },
+        async setConfig(key, value) {
+            await db.config.put({ id: key, value });
+        },
+
+        // Enlevements
+        async getEnlevement(id) { return db.enlevements.get(Number(id)); },
+        async listEnlevements() { return db.enlevements.orderBy('date').reverse().toArray(); },
+        async saveEnlevement(data) {
+            const now = new Date().toISOString();
+            const wasNew = !data.id;
+            data.updatedAt = now;
+            if (wasNew) data.createdAt = now;
+            const id = await db.enlevements.put(data);
+            return id;
+        },
+        async deleteEnlevement(id) { return db.enlevements.delete(Number(id)); },
+
+        // Types dechets
+        async listTypesDechets() { return db.types_dechets.orderBy('codeLow').toArray(); },
+        async getTypeDechet(id) { return db.types_dechets.get(Number(id)); },
+        async saveTypeDechet(data) { return db.types_dechets.put(data); },
+        async deleteTypeDechet(id) { return db.types_dechets.delete(Number(id)); },
+
+        // Prestataires
+        async listPrestataires() { return db.prestataires.orderBy('nom').toArray(); },
+        async getPrestataire(id) { return db.prestataires.get(Number(id)); },
+        async savePrestataire(data) { return db.prestataires.put(data); },
+        async deletePrestataire(id) { return db.prestataires.delete(Number(id)); },
+
+        // Sites
+        async listSites() { return db.sites.orderBy('nom').toArray(); },
+        async getSite(id) { return db.sites.get(Number(id)); },
+        async saveSite(data) { return db.sites.put(data); },
+        async deleteSite(id) { return db.sites.delete(Number(id)); }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- ACTIVITY LOG                                                  -->
+    <!-- ============================================================= -->
+    <script>
+    const ActivityLog = {
+        _key: 'dechets_activity',
+        _max: 200,
+        log(action, details) {
+            try {
+                const arr = JSON.parse(localStorage.getItem(this._key) || '[]');
+                arr.unshift({
+                    ts: new Date().toISOString(),
+                    user: (typeof DataSync !== 'undefined' && DataSync.getUserName) ? DataSync.getUserName() : '',
+                    action,
+                    details: details || {}
+                });
+                if (arr.length > this._max) arr.length = this._max;
+                localStorage.setItem(this._key, JSON.stringify(arr));
+            } catch (_) {}
+        },
+        list() {
+            try { return JSON.parse(localStorage.getItem(this._key) || '[]'); }
+            catch { return []; }
+        },
+        clear() { localStorage.removeItem(this._key); }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- CONFIG SHAREPOINT / MSAL                                      -->
+    <!-- ============================================================= -->
+    <script>
+    const APP_CONFIG = {
+        TENANT_ID:   '6487f869-e502-42be-91ab-5c1ecde34be6',
+        CLIENT_ID:   'ae0f1f6c-aedc-4866-899c-8d128e2af81a',
+
+        SHAREPOINT_SITE_PATH: '/sites/QHSE',
+        DATA_FOLDER_PATH:     'Documents/SuiviDechets',
+        DATA_FILE_NAME:       'data.json',
+        ACTIVITY_LOG_FILE:    'Documents/SuiviDechets/activity-log.json',
+        PRESENCE_FOLDER:      'Documents/SuiviDechets/presence',
+
+        SCOPES: ['Files.ReadWrite.All', 'User.Read', 'Sites.ReadWrite.All'],
+
+        REDIRECT_URI: window.location.origin + window.location.pathname,
+
+        POLL_INTERVAL_MS:     15000,
+        PRESENCE_INTERVAL_MS: 30000,
+        SAVE_DEBOUNCE_MS:     1500,
+        PRESENCE_STALE_MS:    90000
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- SYNC SHAREPOINT (MSAL + Graph API)                            -->
+    <!-- ============================================================= -->
+    <script>
+    let _msalInstance = null;
+    let _msalAccount  = null;
+
+    const _isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)
+        || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
+
+    async function _initMSAL() {
+        if (_msalInstance) return _msalInstance;
+        const config = {
+            auth: {
+                clientId:    APP_CONFIG.CLIENT_ID,
+                authority:   `https://login.microsoftonline.com/${APP_CONFIG.TENANT_ID}`,
+                redirectUri: APP_CONFIG.REDIRECT_URI
+            },
+            cache: {
+                cacheLocation: 'localStorage',
+                storeAuthStateInCookie: true
+            }
+        };
+        _msalInstance = new msal.PublicClientApplication(config);
+        await _msalInstance.initialize();
+
+        const resp = await _msalInstance.handleRedirectPromise();
+        if (resp) {
+            _msalAccount = resp.account;
+            _msalInstance._fromRedirect = true;
+        } else {
+            const accounts = _msalInstance.getAllAccounts();
+            if (accounts.length > 0) _msalAccount = accounts[0];
+        }
+        return _msalInstance;
+    }
+
+    async function _getToken() {
+        if (!_msalInstance) await _initMSAL();
+        if (!_msalAccount) return null;
+        try {
+            const resp = await _msalInstance.acquireTokenSilent({
+                scopes: APP_CONFIG.SCOPES,
+                account: _msalAccount
+            });
+            return resp.accessToken;
+        } catch (e) {
+            if (e instanceof msal.InteractionRequiredAuthError) {
+                if (_isMobile) {
+                    await _msalInstance.acquireTokenRedirect({ scopes: APP_CONFIG.SCOPES });
+                    return null;
+                }
+                const resp = await _msalInstance.acquireTokenPopup({ scopes: APP_CONFIG.SCOPES });
+                _msalAccount = resp.account;
+                return resp.accessToken;
+            }
+            console.error('MSAL token error:', e);
+            return null;
+        }
+    }
+
+    async function _graphFetch(url, options = {}) {
+        const token = await _getToken();
+        if (!token) throw new Error('Non authentifie');
+        const headers = { 'Authorization': `Bearer ${token}`, ...(options.headers || {}) };
+        return fetch(url, { ...options, headers });
+    }
+
+    function _siteApiBase() {
+        return `https://graph.microsoft.com/v1.0/sites/root:${APP_CONFIG.SHAREPOINT_SITE_PATH}:`;
+    }
+
+    let _cachedDriveId = null;
+    async function _getDriveId() {
+        if (_cachedDriveId) return _cachedDriveId;
+        const resp = await _graphFetch(`${_siteApiBase()}/drive`);
+        if (!resp.ok) throw new Error('Impossible de trouver le drive SharePoint: ' + resp.status);
+        const data = await resp.json();
+        _cachedDriveId = data.id;
+        return _cachedDriveId;
+    }
+
+    async function _readJsonFile(filePath) {
+        const driveId = await _getDriveId();
+        const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${filePath}:/content`;
+        const resp = await _graphFetch(url);
+        if (resp.status === 404) return null;
+        if (!resp.ok) {
+            const err = new Error('Erreur lecture fichier: ' + resp.status);
+            err.status = resp.status;
+            throw err;
+        }
+        return resp.json();
+    }
+
+    async function _readJsonFileWithETag(filePath) {
+        const driveId = await _getDriveId();
+        const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${filePath}:/content`;
+        const resp = await _graphFetch(url);
+        if (resp.status === 404) return { data: null, eTag: null };
+        if (!resp.ok) {
+            const err = new Error('Erreur lecture fichier: ' + resp.status);
+            err.status = resp.status;
+            throw err;
+        }
+        const eTag = resp.headers.get('ETag') || resp.headers.get('etag') || null;
+        const data = await resp.json();
+        return { data, eTag };
+    }
+
+    async function _writeJsonFile(filePath, data, opts = {}) {
+        const driveId = await _getDriveId();
+        const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${filePath}:/content`;
+        const headers = { 'Content-Type': 'application/json' };
+        if (opts.ifMatch)     headers['If-Match']      = opts.ifMatch;
+        if (opts.ifNoneMatch) headers['If-None-Match'] = opts.ifNoneMatch;
+        const resp = await _graphFetch(url, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(data)
+        });
+        if (resp.status === 412) {
+            const err = new Error('Conflit de version');
+            err.status = 412;
+            err.isPreconditionFailed = true;
+            throw err;
+        }
+        if (!resp.ok) throw new Error('Erreur ecriture fichier: ' + resp.status);
+        return resp.json();
+    }
+
+    async function _deleteFile(filePath) {
+        const driveId = await _getDriveId();
+        const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${filePath}`;
+        await _graphFetch(url, { method: 'DELETE' });
+    }
+
+    async function _listFiles(folderPath) {
+        const driveId = await _getDriveId();
+        const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${folderPath}:/children`;
+        const resp = await _graphFetch(url);
+        if (resp.status === 404) return [];
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        return data.value || [];
+    }
+
+    /* ==============================================================
+       DataSync - synchronisation avec SharePoint
+       ============================================================== */
+    const DataSync = {
+        _connected: false,
+        _dirty: false,
+        _saveTimer: null,
+        _saving: false,
+        _loadedMeta: null,
+        _lastSavedAt: null,
+        _pollTimer: null,
+        _presenceTimer: null,
+        _pendingRemoteData: null,
+        _pendingNotified: false,
+        _loadedSnapshot: null,
+
+        get _dirHandle() { return this._connected ? true : null; },
+
+        getUserName() {
+            if (_msalAccount && _msalAccount.name) return _msalAccount.name;
+            return localStorage.getItem('dechets_user_name') || '';
+        },
+        setUserName(name) {
+            localStorage.setItem('dechets_user_name', (name || '').trim());
+        },
+
+        async _collectData() {
+            const enlevements   = await db.enlevements.toArray();
+            const types_dechets = await db.types_dechets.toArray();
+            const prestataires  = await db.prestataires.toArray();
+            const sites         = await db.sites.toArray();
+            const utilisateurs  = await db.utilisateurs.toArray();
+            const config        = await db.config.toArray();
+            const version       = (this._loadedMeta?.version || 0) + 1;
+            return {
+                _meta: {
+                    version,
+                    lastSaved: new Date().toISOString(),
+                    savedBy: this.getUserName() || 'inconnu'
+                },
+                enlevements, types_dechets, prestataires, sites, utilisateurs, config
+            };
+        },
+
+        async _applyRemoteData(data) {
+            if (!data) return;
+            this._loadedMeta = data._meta || null;
+            this._lastSavedAt = data._meta?.lastSaved || null;
+
+            await db.transaction('rw', db.enlevements, db.types_dechets, db.prestataires, db.sites, db.utilisateurs, db.config, async () => {
+                await db.enlevements.clear();
+                await db.types_dechets.clear();
+                await db.prestataires.clear();
+                await db.sites.clear();
+                await db.utilisateurs.clear();
+                await db.config.clear();
+                if (data.enlevements?.length)   await db.enlevements.bulkPut(data.enlevements);
+                if (data.types_dechets?.length) await db.types_dechets.bulkPut(data.types_dechets);
+                if (data.prestataires?.length)  await db.prestataires.bulkPut(data.prestataires);
+                if (data.sites?.length)         await db.sites.bulkPut(data.sites);
+                if (data.utilisateurs?.length)  await db.utilisateurs.bulkPut(data.utilisateurs);
+                if (data.config?.length)        await db.config.bulkPut(data.config);
+            });
+
+            this._dirty = false;
+            this._updateBadge(false);
+            await this._captureSnapshot();
+        },
+
+        async _captureSnapshot() {
+            try {
+                const raw = {
+                    enlevements:   await db.enlevements.toArray(),
+                    types_dechets: await db.types_dechets.toArray(),
+                    prestataires:  await db.prestataires.toArray(),
+                    sites:         await db.sites.toArray(),
+                    utilisateurs:  await db.utilisateurs.toArray(),
+                    config:        await db.config.toArray()
+                };
+                this._loadedSnapshot = JSON.stringify(raw);
+            } catch (e) {
+                this._loadedSnapshot = null;
+            }
+        },
+
+        async _writeLocalData(data) {
+            await db.transaction('rw', db.enlevements, db.types_dechets, db.prestataires, db.sites, db.utilisateurs, db.config, async () => {
+                await db.enlevements.clear();
+                await db.types_dechets.clear();
+                await db.prestataires.clear();
+                await db.sites.clear();
+                await db.utilisateurs.clear();
+                await db.config.clear();
+                if (data.enlevements?.length)   await db.enlevements.bulkPut(data.enlevements);
+                if (data.types_dechets?.length) await db.types_dechets.bulkPut(data.types_dechets);
+                if (data.prestataires?.length)  await db.prestataires.bulkPut(data.prestataires);
+                if (data.sites?.length)         await db.sites.bulkPut(data.sites);
+                if (data.utilisateurs?.length)  await db.utilisateurs.bulkPut(data.utilisateurs);
+                if (data.config?.length)        await db.config.bulkPut(data.config);
+            });
+        },
+
+        async _mergeWithRemote(remoteData) {
+            const current = {
+                enlevements:   await db.enlevements.toArray(),
+                types_dechets: await db.types_dechets.toArray(),
+                prestataires:  await db.prestataires.toArray(),
+                sites:         await db.sites.toArray(),
+                utilisateurs:  await db.utilisateurs.toArray(),
+                config:        await db.config.toArray()
+            };
+            let snapshot;
+            try {
+                snapshot = this._loadedSnapshot ? JSON.parse(this._loadedSnapshot)
+                    : { enlevements: [], types_dechets: [], prestataires: [], sites: [], utilisateurs: [], config: [] };
+            } catch {
+                snapshot = { enlevements: [], types_dechets: [], prestataires: [], sites: [], utilisateurs: [], config: [] };
+            }
+
+            const merged = {
+                _meta: remoteData._meta,
+                enlevements:   [...(remoteData.enlevements   || [])],
+                types_dechets: [...(remoteData.types_dechets || [])],
+                prestataires:  [...(remoteData.prestataires  || [])],
+                sites:         [...(remoteData.sites         || [])],
+                utilisateurs:  [...(remoteData.utilisateurs  || [])],
+                config:        [...(remoteData.config        || [])]
+            };
+
+            const autoIdStores = new Set(['enlevements', 'types_dechets', 'prestataires', 'sites']);
+            const stores = ['enlevements', 'types_dechets', 'prestataires', 'sites', 'utilisateurs', 'config'];
+
+            for (const store of stores) {
+                const curArr  = current[store]  || [];
+                const snapArr = snapshot[store] || [];
+                const remoteById = new Map(merged[store].map(e => [e.id, e]));
+                const snapById   = new Map(snapArr.map(e => [e.id, e]));
+                const curById    = new Map(curArr.map(e => [e.id, e]));
+
+                const localAdded = [], localUpdated = [], localDeletedIds = [];
+                for (const [id, entry] of curById) {
+                    const snap = snapById.get(id);
+                    if (!snap) localAdded.push(entry);
+                    else if (JSON.stringify(snap) !== JSON.stringify(entry)) localUpdated.push(entry);
+                }
+                for (const id of snapById.keys()) {
+                    if (!curById.has(id)) localDeletedIds.push(id);
+                }
+                for (const id of localDeletedIds) remoteById.delete(id);
+                for (const entry of localUpdated) {
+                    if (remoteById.has(entry.id)) remoteById.set(entry.id, entry);
+                    else localAdded.push(entry);
+                }
+                let nextId = 1;
+                for (const id of remoteById.keys()) {
+                    if (typeof id === 'number' && id >= nextId) nextId = id + 1;
+                }
+                for (const entry of localAdded) {
+                    const newEntry = { ...entry };
+                    if (autoIdStores.has(store) && remoteById.has(newEntry.id)) {
+                        while (remoteById.has(nextId)) nextId++;
+                        newEntry.id = nextId++;
+                    }
+                    remoteById.set(newEntry.id, newEntry);
+                }
+                merged[store] = Array.from(remoteById.values());
+            }
+            return merged;
+        },
+
+        async _loadFromRemote() {
+            try {
+                const filePath = `${APP_CONFIG.DATA_FOLDER_PATH}/${APP_CONFIG.DATA_FILE_NAME}`;
+                const data = await _readJsonFile(filePath);
+                if (!data || !data._meta) return false;
+                await this._applyRemoteData(data);
+                console.log('DataSync: donnees chargees depuis SharePoint v' + data._meta.version);
+                return true;
+            } catch (e) {
+                console.warn('DataSync: lecture distante impossible', e);
+                return false;
+            }
+        },
+
+        async save() {
+            if (this._saving) return;
+            if (!this._connected) return;
+            this._saving = true;
+            const filePath = `${APP_CONFIG.DATA_FOLDER_PATH}/${APP_CONFIG.DATA_FILE_NAME}`;
+            const MAX_RETRIES = 3;
+            let attempt = 0;
+            try {
+                while (true) {
+                    attempt++;
+                    let remoteData = null, remoteETag = null, remoteReadFailed = false;
+                    try {
+                        const { data, eTag } = await _readJsonFileWithETag(filePath);
+                        remoteData = data;
+                        remoteETag = eTag;
+                    } catch (readErr) {
+                        const status = readErr?.status;
+                        const isMissing = status === 404;
+                        if (!isMissing) remoteReadFailed = true;
+                    }
+
+                    if (remoteReadFailed && (this._loadedMeta?.version || 0) > 0) {
+                        showToast('Sauvegarde reportee, reessai automatique', 'warning');
+                        clearTimeout(this._saveTimer);
+                        this._saveTimer = setTimeout(() => this.save(), 5000);
+                        return;
+                    }
+
+                    const remoteVersion     = remoteData?._meta?.version || 0;
+                    const lastSyncedVersion = this._loadedMeta?.version  || 0;
+                    let baseVersion = lastSyncedVersion;
+
+                    if (remoteData && remoteVersion > lastSyncedVersion) {
+                        const merged = await this._mergeWithRemote(remoteData);
+                        await this._writeLocalData(merged);
+                        baseVersion = remoteVersion;
+                        showToast('Fusion avec donnees distantes', 'info');
+                    }
+
+                    const data = await this._collectData();
+                    data._meta.version = baseVersion + 1;
+                    const writeOpts = {};
+                    if (remoteETag) writeOpts.ifMatch = remoteETag;
+                    else if (!remoteData) writeOpts.ifNoneMatch = '*';
+
+                    try {
+                        await _writeJsonFile(filePath, data, writeOpts);
+                    } catch (writeErr) {
+                        if (writeErr?.isPreconditionFailed && attempt < MAX_RETRIES) {
+                            await new Promise(r => setTimeout(r, 200 + Math.random() * 400));
+                            continue;
+                        }
+                        throw writeErr;
+                    }
+
+                    this._loadedMeta = data._meta;
+                    this._lastSavedAt = data._meta.lastSaved;
+                    this._dirty = false;
+                    this._updateBadge(false);
+                    await db.config.put({ id: '_syncMeta', value: data._meta });
+                    await this._captureSnapshot();
+                    ActivityLog.log('sauvegarde', { version: data._meta.version });
+                    break;
+                }
+            } catch (e) {
+                console.error('DataSync: erreur sauvegarde', e);
+                showToast('Erreur sauvegarde SharePoint (donnees locales conservees)', 'warning');
+            } finally {
+                this._saving = false;
+            }
+        },
+
+        markDirty() {
+            this._dirty = true;
+            this._updateBadge(true);
+            if (this._connected) {
+                clearTimeout(this._saveTimer);
+                this._saveTimer = setTimeout(() => this.save(), APP_CONFIG.SAVE_DEBOUNCE_MS);
+            }
+        },
+
+        async autoConnect() {
+            try {
+                await _initMSAL();
+                if (_msalAccount) {
+                    this._connected = true;
+                    await this._loadFromRemote();
+                    this.registerPresence();
+                    if (_msalInstance._fromRedirect) {
+                        showToast('Connecte a SharePoint - ' + (_msalAccount.name || ''));
+                    }
+                    return 'connected';
+                }
+                return 'no-handle';
+            } catch (e) {
+                console.warn('autoConnect echoue', e);
+                return 'no-handle';
+            }
+        },
+
+        async connectFolder() {
+            try {
+                await _initMSAL();
+                if (_isMobile) {
+                    await _msalInstance.loginRedirect({ scopes: APP_CONFIG.SCOPES });
+                    return false;
+                }
+                const resp = await _msalInstance.loginPopup({ scopes: APP_CONFIG.SCOPES });
+                _msalAccount = resp.account;
+                this._connected = true;
+                const loaded = await this._loadFromRemote();
+                if (!loaded) await this.save();
+                this.registerPresence();
+                showToast('Connecte a SharePoint - ' + (_msalAccount.name || ''));
+                ActivityLog.log('connexion', { compte: _msalAccount.name || '' });
+                return true;
+            } catch (e) {
+                if (e.errorCode === 'user_cancelled') return false;
+                console.error('Erreur connexion', e);
+                showToast('Erreur de connexion Microsoft', 'danger');
+                return false;
+            }
+        },
+
+        async requestPermission() { return this.connectFolder(); },
+
+        startPolling() {
+            if (this._pollTimer) clearInterval(this._pollTimer);
+            this._pollTimer = setInterval(async () => {
+                if (!this._connected || this._saving) return;
+                try {
+                    const filePath = `${APP_CONFIG.DATA_FOLDER_PATH}/${APP_CONFIG.DATA_FILE_NAME}`;
+                    const data = await _readJsonFile(filePath);
+                    if (!data || !data._meta) return;
+                    const remoteVersion = data._meta.version || 0;
+                    const localVersion  = this._loadedMeta?.version || 0;
+                    if (remoteVersion > localVersion) {
+                        if (this._isUserEditing()) {
+                            this._pendingRemoteData = data;
+                            if (!this._pendingNotified) {
+                                showToast('Nouvelles donnees - appliquees apres votre saisie', 'info');
+                                this._pendingNotified = true;
+                            }
+                            return;
+                        }
+                        if (this._dirty) {
+                            await this.save();
+                            return;
+                        }
+                        await this._applyRemoteData(data);
+                        if (typeof App !== 'undefined' && App.route) App.route();
+                        showToast('Donnees mises a jour par ' + (data._meta.savedBy || 'un collegue'), 'info');
+                    }
+                } catch (e) { /* silent */ }
+            }, APP_CONFIG.POLL_INTERVAL_MS);
+        },
+
+        async registerPresence() {
+            if (!this._connected) return;
+            const name = this.getUserName() || 'anonyme';
+            const data = { user: name, ts: new Date().toISOString(), tab: Math.random().toString(36).substring(2, 8) };
+            const safeName = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'user';
+            try {
+                await _writeJsonFile(`${APP_CONFIG.PRESENCE_FOLDER}/${safeName}.json`, data);
+            } catch { /* ignore */ }
+            if (!this._presenceTimer) {
+                this._presenceTimer = setInterval(() => this.registerPresence(), APP_CONFIG.PRESENCE_INTERVAL_MS);
+            }
+        },
+
+        async getActiveUsers() {
+            if (!this._connected) return [];
+            try {
+                const files = await _listFiles(APP_CONFIG.PRESENCE_FOLDER);
+                const now = Date.now();
+                const users = [];
+                for (const f of files) {
+                    if (!f.name.endsWith('.json')) continue;
+                    try {
+                        const content = await _readJsonFile(`${APP_CONFIG.PRESENCE_FOLDER}/${f.name}`);
+                        if (!content) continue;
+                        if (now - new Date(content.ts).getTime() < APP_CONFIG.PRESENCE_STALE_MS) {
+                            users.push(content);
+                        }
+                    } catch { /* ignore */ }
+                }
+                const myName = this.getUserName();
+                return users.filter(u => u.user !== myName);
+            } catch { return []; }
+        },
+
+        _isUserEditing() {
+            const hash = (location.hash || '').slice(1);
+            return hash.startsWith('enlevement-new') || hash.startsWith('enlevement-edit');
+        },
+
+        async _applyPendingIfAny() {
+            if (!this._pendingRemoteData) return false;
+            if (this._isUserEditing()) return false;
+            if (this._dirty) {
+                this._pendingRemoteData = null;
+                this._pendingNotified = false;
+                try { await this.save(); } catch (e) {}
+                return false;
+            }
+            const data = this._pendingRemoteData;
+            this._pendingRemoteData = null;
+            this._pendingNotified = false;
+            try {
+                await this._applyRemoteData(data);
+                showToast('Donnees mises a jour par ' + (data._meta?.savedBy || 'un collegue'), 'info');
+                return true;
+            } catch { return false; }
+        },
+
+        _updateBadge(dirty) {
+            const el = document.getElementById('sync-badge');
+            if (el) el.style.display = dirty ? 'inline-block' : 'none';
+        },
+
+        updateConnectButton(state) {
+            const btn = document.getElementById('btn-connect-folder');
+            const btnSave = document.getElementById('btn-save-data');
+            if (!btn) return;
+            if (state === 'connected') {
+                btn.className = 'btn btn-sm btn-outline-light';
+                btn.innerHTML = '☁️<span class="ms-1">SharePoint</span>';
+                btn.title = 'Connecte';
+                btn.onclick = null;
+                if (btnSave) btnSave.style.display = '';
+            } else {
+                btn.className = 'btn btn-sm btn-outline-warning';
+                btn.innerHTML = '\u{1F517}<span class="ms-1">Connexion</span>';
+                btn.onclick = async () => {
+                    const ok = await this.connectFolder();
+                    if (ok) this.updateConnectButton('connected');
+                };
+                if (btnSave) btnSave.style.display = 'none';
+            }
+        },
+
+        _refreshReminder() { /* no-op */ },
+
+        setupBeforeUnload() {
+            window.addEventListener('beforeunload', (e) => {
+                if (this._dirty) {
+                    e.preventDefault();
+                    e.returnValue = 'Des modifications non sauvegardees seront perdues';
+                }
+            });
+        },
+
+        showConnectReminder() {
+            const bar = document.getElementById('permission-bar');
+            if (!bar) return;
+            bar.innerHTML = `
+                <div class="alert alert-info alert-dismissible d-flex align-items-center m-2" role="alert">
+                    \u{1F517}
+                    <div class="flex-grow-1 ms-2">Mode hors-ligne - connectez-vous a SharePoint pour synchroniser.</div>
+                    <button class="btn btn-sm btn-primary ms-2" id="btn-connect-reminder">Connexion</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>`;
+            bar.querySelector('#btn-connect-reminder').onclick = async () => {
+                const ok = await this.connectFolder();
+                if (ok) { bar.innerHTML = ''; this.updateConnectButton('connected'); }
+            };
+        },
+
+        _updatePresenceBanner(others) {
+            if (!others || !others.length) return;
+            const names = others.map(u => u.user).join(', ');
+            showToast('Autres utilisateurs en ligne : ' + names, 'info');
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- HELPERS (format, options)                                     -->
+    <!-- ============================================================= -->
+    <script>
+    const Helpers = {
+        formatDateFR(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr + (dateStr.length === 10 ? 'T12:00:00' : ''));
+            if (isNaN(d)) return dateStr;
+            return d.toLocaleDateString('fr-FR');
+        },
+        todayISO() {
+            const d = new Date();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const j = String(d.getDate()).padStart(2, '0');
+            return `${d.getFullYear()}-${m}-${j}`;
+        },
+        esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({
+                '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+            }[c]));
+        },
+        async compressPhoto(file, maxWidth = 1200, quality = 0.7) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let { width, height } = img;
+                        if (width > maxWidth) {
+                            height = Math.round(height * maxWidth / width);
+                            width = maxWidth;
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+    };
+
+    const UNITES   = ['kg', 't', 'm3', 'litres'];
+    const CONTENANTS = ['benne', 'bigbag', 'fut', 'GRV', 'palette', 'autre'];
+    const MODES_TRAITEMENT = [
+        { code: 'R1',  label: 'R1 - Combustible / production energie' },
+        { code: 'R3',  label: 'R3 - Recyclage matieres organiques' },
+        { code: 'R4',  label: 'R4 - Recyclage metaux' },
+        { code: 'R5',  label: 'R5 - Recyclage autres matieres inorganiques' },
+        { code: 'R12', label: 'R12 - Echange de dechets en vue de R1-R11' },
+        { code: 'R13', label: 'R13 - Stockage transitoire avant valorisation' },
+        { code: 'D1',  label: 'D1 - Depot sur ou dans le sol' },
+        { code: 'D5',  label: 'D5 - Mise en decharge specialement amenagee' },
+        { code: 'D9',  label: 'D9 - Traitement physico-chimique' },
+        { code: 'D10', label: 'D10 - Incineration a terre' },
+        { code: 'D13', label: 'D13 - Regroupement avant elimination' },
+        { code: 'D15', label: 'D15 - Stockage transitoire avant elimination' }
+    ];
+
+    function tonnesEquiv(quantite, unite) {
+        const q = Number(quantite) || 0;
+        switch (unite) {
+            case 't':      return q;
+            case 'kg':     return q / 1000;
+            case 'litres': return q / 1000; // approximation ~1kg/litre
+            case 'm3':     return q;        // approximation ~1t/m3
+            default:       return q / 1000;
+        }
+    }
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- PAGE : DASHBOARD                                              -->
+    <!-- ============================================================= -->
+    <script>
+    const DashboardPage = {
+        async render(container) {
+            const enlevements = await DB.listEnlevements();
+            const types       = await DB.listTypesDechets();
+            const sites       = await DB.listSites();
+
+            const now = new Date();
+            const moisCourant = now.getMonth();
+            const anneeCourante = now.getFullYear();
+
+            const enlMois = enlevements.filter(e => {
+                const d = new Date(e.date + 'T12:00:00');
+                return d.getMonth() === moisCourant && d.getFullYear() === anneeCourante;
+            });
+            const enlAnnee = enlevements.filter(e => {
+                const d = new Date(e.date + 'T12:00:00');
+                return d.getFullYear() === anneeCourante;
+            });
+
+            let tonnesDang = 0, tonnesNonDang = 0, nbBsd = 0;
+            for (const e of enlAnnee) {
+                const t = tonnesEquiv(e.quantite, e.unite);
+                if (e.dangereux) tonnesDang += t; else tonnesNonDang += t;
+                if (e.numeroBsd) nbBsd++;
+            }
+
+            // Top types
+            const topTypes = {};
+            for (const e of enlAnnee) {
+                const k = e.typeDechetDesignation || 'Non specifie';
+                topTypes[k] = (topTypes[k] || 0) + tonnesEquiv(e.quantite, e.unite);
+            }
+            const topTypesArr = Object.entries(topTypes).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+            // Top sites
+            const topSites = {};
+            for (const e of enlAnnee) {
+                const k = e.siteNom || 'Non specifie';
+                topSites[k] = (topSites[k] || 0) + tonnesEquiv(e.quantite, e.unite);
+            }
+            const topSitesArr = Object.entries(topSites).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+            // Tonnage mensuel 12 mois
+            const months = [];
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push({
+                    label: d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+                    year: d.getFullYear(),
+                    month: d.getMonth(),
+                    tonnes: 0
+                });
+            }
+            for (const e of enlevements) {
+                const d = new Date(e.date + 'T12:00:00');
+                const m = months.find(mm => mm.year === d.getFullYear() && mm.month === d.getMonth());
+                if (m) m.tonnes += tonnesEquiv(e.quantite, e.unite);
+            }
+
+            // Repartition par type (pie)
+            const repartitionType = topTypesArr.slice(0, 8);
+
+            container.innerHTML = `
+                <div class="container">
+                    <h2 class="mb-3"><span>&#x1F4CA;</span> Tableau de bord <small class="text-muted fs-6">${anneeCourante}</small></h2>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3 col-6">
+                            <div class="kpi-card">
+                                <div class="kpi-value">${enlMois.length}</div>
+                                <div class="kpi-label">Enlevements ce mois</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="kpi-card">
+                                <div class="kpi-value">${enlAnnee.length}</div>
+                                <div class="kpi-label">Enlevements ${anneeCourante}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="kpi-card" style="border-left-color:#dc3545">
+                                <div class="kpi-value" style="color:#dc3545">${tonnesDang.toFixed(2)} t</div>
+                                <div class="kpi-label">Dechets dangereux</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="kpi-card">
+                                <div class="kpi-value">${tonnesNonDang.toFixed(2)} t</div>
+                                <div class="kpi-label">Dechets non dangereux</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3 col-6">
+                            <div class="kpi-card" style="border-left-color:#0d6efd">
+                                <div class="kpi-value" style="color:#0d6efd">${nbBsd}</div>
+                                <div class="kpi-label">BSD emis ${anneeCourante}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="kpi-card">
+                                <div class="kpi-value">${(tonnesDang + tonnesNonDang).toFixed(2)} t</div>
+                                <div class="kpi-label">Tonnage total ${anneeCourante}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">Tonnage mensuel (12 mois)</div>
+                                <div class="card-body"><canvas id="chart-monthly" height="200"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">Repartition par type de dechet (t)</div>
+                                <div class="card-body"><canvas id="chart-type" height="200"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">Top 5 sites producteurs ${anneeCourante}</div>
+                                <div class="card-body">
+                                    ${topSitesArr.length === 0 ? '<p class="text-muted m-0">Aucune donnee.</p>' :
+                                        '<table class="table table-sm mb-0"><tbody>' +
+                                        topSitesArr.map(([nom, t]) =>
+                                            `<tr><td>${Helpers.esc(nom)}</td><td class="text-end fw-bold">${t.toFixed(2)} t</td></tr>`
+                                        ).join('') + '</tbody></table>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">Top 5 types de dechets ${anneeCourante}</div>
+                                <div class="card-body">
+                                    ${topTypesArr.length === 0 ? '<p class="text-muted m-0">Aucune donnee.</p>' :
+                                        '<table class="table table-sm mb-0"><tbody>' +
+                                        topTypesArr.map(([nom, t]) =>
+                                            `<tr><td>${Helpers.esc(nom)}</td><td class="text-end fw-bold">${t.toFixed(2)} t</td></tr>`
+                                        ).join('') + '</tbody></table>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            // Charts
+            const ctxMonth = document.getElementById('chart-monthly');
+            if (ctxMonth) {
+                new Chart(ctxMonth, {
+                    type: 'bar',
+                    data: {
+                        labels: months.map(m => m.label),
+                        datasets: [{
+                            label: 'Tonnes',
+                            data: months.map(m => +m.tonnes.toFixed(2)),
+                            backgroundColor: '#00693e'
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } } }
+                });
+            }
+
+            const ctxType = document.getElementById('chart-type');
+            if (ctxType && repartitionType.length > 0) {
+                new Chart(ctxType, {
+                    type: 'doughnut',
+                    data: {
+                        labels: repartitionType.map(([n]) => n.length > 40 ? n.slice(0, 37) + '...' : n),
+                        datasets: [{
+                            data: repartitionType.map(([, v]) => +v.toFixed(2)),
+                            backgroundColor: ['#00693e', '#2a9d6c', '#5cb85c', '#f0ad4e', '#d9534f', '#5bc0de', '#9b59b6', '#34495e']
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+                });
+            }
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- PAGE : LISTE ENLEVEMENTS                                      -->
+    <!-- ============================================================= -->
+    <script>
+    const EnlevementListPage = {
+        async render(container) {
+            const enlevements  = await DB.listEnlevements();
+            const sites        = await DB.listSites();
+            const types        = await DB.listTypesDechets();
+            const prestataires = await DB.listPrestataires();
+
+            container.innerHTML = `
+                <div class="container">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h2 class="mb-0">&#x1F4CB; Registre des enlevements</h2>
+                        <div>
+                            <button class="btn btn-success" id="btn-export-registre">&#x1F4C4; Exporter registre</button>
+                            <a href="#enlevement-new" class="btn btn-primary">&#x2795; Nouvel enlevement</a>
+                        </div>
+                    </div>
+
+                    <div class="filter-bar">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-2 col-6">
+                                <label class="form-label small">Date debut</label>
+                                <input type="date" id="f-debut" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label small">Date fin</label>
+                                <input type="date" id="f-fin" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label small">Site</label>
+                                <select id="f-site" class="form-select form-select-sm">
+                                    <option value="">Tous</option>
+                                    ${sites.map(s => `<option value="${s.id}">${Helpers.esc(s.nom)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <label class="form-label small">Type dechet</label>
+                                <select id="f-type" class="form-select form-select-sm">
+                                    <option value="">Tous</option>
+                                    ${types.map(t => `<option value="${t.id}">${Helpers.esc(t.codeLow)} - ${Helpers.esc(t.designation)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label small">Prestataire</label>
+                                <select id="f-prest" class="form-select form-select-sm">
+                                    <option value="">Tous</option>
+                                    ${prestataires.map(p => `<option value="${p.id}">${Helpers.esc(p.nom)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-md-1 col-6 form-check ms-2">
+                                <input type="checkbox" id="f-dang" class="form-check-input">
+                                <label for="f-dang" class="form-check-label small">Dangereux uniquement</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Site</th>
+                                            <th>Type</th>
+                                            <th class="text-end">Quantite</th>
+                                            <th>Prestataire</th>
+                                            <th>BSD</th>
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="enl-tbody"></tbody>
+                                </table>
+                            </div>
+                            <div class="p-2 small text-muted"><span id="enl-count">0</span> enlevement(s)</div>
+                        </div>
+                    </div>
+                </div>`;
+
+            const refresh = () => {
+                const debut = document.getElementById('f-debut').value;
+                const fin   = document.getElementById('f-fin').value;
+                const site  = document.getElementById('f-site').value;
+                const type  = document.getElementById('f-type').value;
+                const prest = document.getElementById('f-prest').value;
+                const dang  = document.getElementById('f-dang').checked;
+
+                let filtered = enlevements.slice();
+                if (debut) filtered = filtered.filter(e => e.date >= debut);
+                if (fin)   filtered = filtered.filter(e => e.date <= fin);
+                if (site)  filtered = filtered.filter(e => String(e.siteId) === site);
+                if (type)  filtered = filtered.filter(e => String(e.typeDechetId) === type);
+                if (prest) filtered = filtered.filter(e => String(e.prestataireId) === prest);
+                if (dang)  filtered = filtered.filter(e => e.dangereux === true);
+
+                const tbody = document.getElementById('enl-tbody');
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucun enlevement.</td></tr>';
+                } else {
+                    tbody.innerHTML = filtered.map(e => `
+                        <tr>
+                            <td>${Helpers.formatDateFR(e.date)}</td>
+                            <td>${Helpers.esc(e.siteNom || '')}</td>
+                            <td>
+                                <span class="badge-low">${Helpers.esc(e.codeLow || '')}</span>
+                                ${e.dangereux ? '<span class="badge-danger-dechet ms-1">DANGEREUX</span>' : ''}
+                                <div class="small text-muted">${Helpers.esc(e.typeDechetDesignation || '')}</div>
+                            </td>
+                            <td class="text-end fw-bold">${Helpers.esc(e.quantite)} ${Helpers.esc(e.unite || 'kg')}</td>
+                            <td>${Helpers.esc(e.prestataireNom || '')}</td>
+                            <td>${Helpers.esc(e.numeroBsd || '-')}</td>
+                            <td class="text-center" style="white-space:nowrap">
+                                <button class="btn btn-sm btn-outline-primary" data-pdf="${e.id}" title="PDF">&#x1F4C4;</button>
+                                <a class="btn btn-sm btn-outline-secondary" href="#enlevement-edit/${e.id}" title="Modifier">&#x270F;&#xFE0F;</a>
+                                <button class="btn btn-sm btn-outline-danger" data-del="${e.id}" title="Supprimer">&#x1F5D1;&#xFE0F;</button>
+                            </td>
+                        </tr>`).join('');
+                }
+                document.getElementById('enl-count').textContent = filtered.length;
+            };
+
+            ['f-debut','f-fin','f-site','f-type','f-prest','f-dang'].forEach(id => {
+                document.getElementById(id).addEventListener('change', refresh);
+            });
+
+            container.addEventListener('click', async (e) => {
+                const delId = e.target.closest('[data-del]')?.dataset.del;
+                if (delId) {
+                    if (confirm('Supprimer cet enlevement ?')) {
+                        await DB.deleteEnlevement(delId);
+                        ActivityLog.log('suppression_enlevement', { id: delId });
+                        if (typeof DataSync !== 'undefined') DataSync.markDirty();
+                        showToast('Enlevement supprime');
+                        App.route();
+                    }
+                    return;
+                }
+                const pdfId = e.target.closest('[data-pdf]')?.dataset.pdf;
+                if (pdfId) {
+                    await PdfExport.generate(pdfId);
+                }
+            });
+
+            document.getElementById('btn-export-registre').addEventListener('click', () => {
+                ExcelExport.registre();
+            });
+
+            refresh();
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- PAGE : NEW / EDIT ENLEVEMENT                                  -->
+    <!-- ============================================================= -->
+    <script>
+    const EnlevementFormPage = {
+        async render(container, id) {
+            const types        = await DB.listTypesDechets();
+            const sites        = await DB.listSites();
+            const prestataires = await DB.listPrestataires();
+
+            const isEdit = !!id;
+            const enl = isEdit ? await DB.getEnlevement(id) : {
+                date: Helpers.todayISO(),
+                siteId: '', typeDechetId: '', prestataireId: '',
+                quantite: '', unite: 'kg', contenant: 'benne',
+                numeroBsd: '', modeTraitement: '', destinationNom: '',
+                destinationSiret: '', transporteurNom: '', observations: '',
+                photo: '', numeroFacture: '',
+                saisiPar: (DataSync.getUserName ? DataSync.getUserName() : '')
+            };
+            if (isEdit && !enl) {
+                container.innerHTML = '<div class="alert alert-danger m-3">Enlevement introuvable.</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="container">
+                    <h2 class="mb-3">${isEdit ? '&#x270F;&#xFE0F; Modifier' : '&#x2795; Nouvel'} enlevement</h2>
+
+                    <form id="enl-form" autocomplete="off">
+                        <div class="row g-4">
+                            <div class="col-lg-6">
+                                <div class="card p-3">
+                                    <div class="form-section-title">Informations generales</div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Date <span class="required-mark">*</span></label>
+                                        <input type="date" name="date" class="form-control" required value="${Helpers.esc(enl.date)}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Site producteur <span class="required-mark">*</span></label>
+                                        <select name="siteId" class="form-select" required>
+                                            <option value="">-- Choisir --</option>
+                                            ${sites.map(s => `<option value="${s.id}" ${String(enl.siteId) === String(s.id) ? 'selected' : ''}>${Helpers.esc(s.nom)} (${Helpers.esc(s.type)})</option>`).join('')}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Type de dechet <span class="required-mark">*</span></label>
+                                        <select name="typeDechetId" class="form-select" required>
+                                            <option value="">-- Choisir --</option>
+                                            ${types.map(t => `<option value="${t.id}" data-dang="${t.dangereux ? 1 : 0}" data-low="${Helpers.esc(t.codeLow)}" data-des="${Helpers.esc(t.designation)}" ${String(enl.typeDechetId) === String(t.id) ? 'selected' : ''}>${Helpers.esc(t.codeLow)} - ${Helpers.esc(t.designation)}${t.dangereux ? ' [DANGEREUX]' : ''}</option>`).join('')}
+                                        </select>
+                                    </div>
+
+                                    <div class="row g-2">
+                                        <div class="col-7">
+                                            <label class="form-label">Quantite <span class="required-mark">*</span></label>
+                                            <input type="number" step="0.001" min="0" name="quantite" class="form-control" required value="${Helpers.esc(enl.quantite)}">
+                                        </div>
+                                        <div class="col-5">
+                                            <label class="form-label">Unite</label>
+                                            <select name="unite" class="form-select">
+                                                ${UNITES.map(u => `<option value="${u}" ${enl.unite === u ? 'selected' : ''}>${u}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3 mt-3">
+                                        <label class="form-label">Conditionnement</label>
+                                        <select name="contenant" class="form-select">
+                                            ${CONTENANTS.map(c => `<option value="${c}" ${enl.contenant === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Photo (1 max)</label>
+                                        <input type="file" id="photo-input" class="form-control" accept="image/*" capture="environment">
+                                        <div id="photo-preview-zone">
+                                            ${enl.photo ? `<img src="${enl.photo}" class="photo-preview"><button type="button" class="btn btn-sm btn-outline-danger mt-1" id="btn-photo-remove">Retirer la photo</button>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card p-3" id="trace-card">
+                                    <div class="form-section-title">Tracabilite</div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Prestataire</label>
+                                        <select name="prestataireId" class="form-select">
+                                            <option value="">-- Choisir --</option>
+                                            ${prestataires.map(p => `<option value="${p.id}" ${String(enl.prestataireId) === String(p.id) ? 'selected' : ''}>${Helpers.esc(p.nom)}</option>`).join('')}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3" id="bsd-wrap">
+                                        <label class="form-label">N° BSD <span class="required-mark" id="bsd-star" style="display:none">*</span></label>
+                                        <input type="text" name="numeroBsd" class="form-control" value="${Helpers.esc(enl.numeroBsd)}" placeholder="Bordereau de suivi des dechets">
+                                        <small class="text-muted" id="bsd-hint">Obligatoire pour les dechets dangereux</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Mode de traitement (R/D)</label>
+                                        <select name="modeTraitement" class="form-select">
+                                            <option value="">-- Non specifie --</option>
+                                            ${MODES_TRAITEMENT.map(m => `<option value="${m.code}" ${enl.modeTraitement === m.code ? 'selected' : ''}>${Helpers.esc(m.label)}</option>`).join('')}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Installation de destination</label>
+                                        <input type="text" name="destinationNom" class="form-control" value="${Helpers.esc(enl.destinationNom)}" placeholder="Centre de traitement">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">SIRET destination</label>
+                                        <input type="text" name="destinationSiret" class="form-control" value="${Helpers.esc(enl.destinationSiret)}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Transporteur</label>
+                                        <input type="text" name="transporteurNom" class="form-control" value="${Helpers.esc(enl.transporteurNom)}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">N° facture</label>
+                                        <input type="text" name="numeroFacture" class="form-control" value="${Helpers.esc(enl.numeroFacture)}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card p-3 mt-3">
+                            <label class="form-label fw-bold">Observations</label>
+                            <textarea name="observations" class="form-control" rows="3">${Helpers.esc(enl.observations)}</textarea>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3 mb-5">
+                            <button type="submit" class="btn btn-primary">&#x1F4BE; Enregistrer</button>
+                            <a href="#enlevement-list" class="btn btn-outline-secondary">Annuler</a>
+                        </div>
+                    </form>
+                </div>`;
+
+            // Logique dangereux -> BSD obligatoire visuellement
+            const typeSelect = container.querySelector('select[name="typeDechetId"]');
+            const bsdWrap = container.querySelector('#bsd-wrap');
+            const bsdStar = container.querySelector('#bsd-star');
+            const bsdInput = container.querySelector('input[name="numeroBsd"]');
+
+            const updateBsdRequired = () => {
+                const opt = typeSelect.options[typeSelect.selectedIndex];
+                const dang = opt && opt.dataset.dang === '1';
+                if (dang) {
+                    bsdWrap.classList.add('required-bsd');
+                    bsdStar.style.display = '';
+                    bsdInput.required = true;
+                } else {
+                    bsdWrap.classList.remove('required-bsd');
+                    bsdStar.style.display = 'none';
+                    bsdInput.required = false;
+                }
+            };
+            typeSelect.addEventListener('change', updateBsdRequired);
+            updateBsdRequired();
+
+            // Gestion photo
+            const photoInput = container.querySelector('#photo-input');
+            const previewZone = container.querySelector('#photo-preview-zone');
+            let currentPhoto = enl.photo || '';
+
+            photoInput.addEventListener('change', async (ev) => {
+                const file = ev.target.files[0];
+                if (!file) return;
+                try {
+                    currentPhoto = await Helpers.compressPhoto(file);
+                    previewZone.innerHTML = `<img src="${currentPhoto}" class="photo-preview"><button type="button" class="btn btn-sm btn-outline-danger mt-1" id="btn-photo-remove">Retirer la photo</button>`;
+                    previewZone.querySelector('#btn-photo-remove').onclick = () => {
+                        currentPhoto = '';
+                        previewZone.innerHTML = '';
+                        photoInput.value = '';
+                    };
+                } catch (e) {
+                    showToast('Erreur lors du chargement de la photo', 'danger');
+                }
+            });
+
+            if (previewZone.querySelector('#btn-photo-remove')) {
+                previewZone.querySelector('#btn-photo-remove').onclick = () => {
+                    currentPhoto = '';
+                    previewZone.innerHTML = '';
+                    photoInput.value = '';
+                };
+            }
+
+            // Submit
+            container.querySelector('#enl-form').addEventListener('submit', async (ev) => {
+                ev.preventDefault();
+                const fd = new FormData(ev.target);
+                const typeOpt = typeSelect.options[typeSelect.selectedIndex];
+                const siteOpt = container.querySelector('select[name="siteId"]').selectedOptions[0];
+                const prestOpt = container.querySelector('select[name="prestataireId"]').selectedOptions[0];
+
+                const data = {
+                    date: fd.get('date'),
+                    siteId: Number(fd.get('siteId')) || null,
+                    siteNom: siteOpt ? siteOpt.textContent.replace(/ \([^)]+\)$/, '') : '',
+                    typeDechetId: Number(fd.get('typeDechetId')) || null,
+                    typeDechetDesignation: typeOpt ? typeOpt.dataset.des : '',
+                    codeLow: typeOpt ? typeOpt.dataset.low : '',
+                    dangereux: typeOpt && typeOpt.dataset.dang === '1',
+                    quantite: Number(fd.get('quantite')) || 0,
+                    unite: fd.get('unite') || 'kg',
+                    contenant: fd.get('contenant') || '',
+                    prestataireId: Number(fd.get('prestataireId')) || null,
+                    prestataireNom: prestOpt && prestOpt.value ? prestOpt.textContent : '',
+                    numeroBsd: (fd.get('numeroBsd') || '').trim(),
+                    modeTraitement: fd.get('modeTraitement') || '',
+                    destinationNom: (fd.get('destinationNom') || '').trim(),
+                    destinationSiret: (fd.get('destinationSiret') || '').trim(),
+                    transporteurNom: (fd.get('transporteurNom') || '').trim(),
+                    numeroFacture: (fd.get('numeroFacture') || '').trim(),
+                    observations: (fd.get('observations') || '').trim(),
+                    photo: currentPhoto || '',
+                    saisiPar: enl.saisiPar || (DataSync.getUserName ? DataSync.getUserName() : '')
+                };
+
+                if (isEdit) data.id = enl.id;
+
+                if (data.dangereux && !data.numeroBsd) {
+                    showToast('Le numero BSD est obligatoire pour les dechets dangereux', 'warning');
+                    return;
+                }
+
+                const savedId = await DB.saveEnlevement(data);
+                ActivityLog.log(isEdit ? 'edit_enlevement' : 'new_enlevement', { id: savedId });
+                if (typeof DataSync !== 'undefined') DataSync.markDirty();
+
+                showToast(isEdit ? 'Enlevement mis a jour' : 'Enlevement enregistre');
+
+                // Bandeau confirmation post-save
+                container.innerHTML = `
+                    <div class="container py-4">
+                        <div class="alert alert-success">
+                            <h4>&#x2705; Enlevement ${isEdit ? 'mis a jour' : 'enregistre'}</h4>
+                            <p class="mb-3">Que voulez-vous faire maintenant ?</p>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button class="btn btn-primary" id="btn-after-pdf">&#x1F4C4; Voir le PDF</button>
+                                <a class="btn btn-success" href="#enlevement-new">&#x2795; Nouvel enlevement</a>
+                                <a class="btn btn-outline-secondary" href="#enlevement-list">&#x1F4CB; Voir le registre</a>
+                                <a class="btn btn-outline-secondary" href="#dashboard">&#x1F4CA; Tableau de bord</a>
+                            </div>
+                        </div>
+                    </div>`;
+                document.getElementById('btn-after-pdf').onclick = () => PdfExport.generate(savedId);
+            });
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- PAGE : CONFIG                                                 -->
+    <!-- ============================================================= -->
+    <script>
+    const ConfigPage = {
+        async render(container) {
+            container.innerHTML = `
+                <div class="container">
+                    <h2 class="mb-3">&#x2699;&#xFE0F; Parametres</h2>
+
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-entreprise" type="button">Entreprise</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-types" type="button">Types de dechets</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-prest" type="button">Prestataires</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sites" type="button">Sites</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-donnees" type="button">Donnees</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-journal" type="button">Journal</button></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="tab-entreprise"><div id="zone-entreprise"></div></div>
+                        <div class="tab-pane fade" id="tab-types"><div id="zone-types"></div></div>
+                        <div class="tab-pane fade" id="tab-prest"><div id="zone-prest"></div></div>
+                        <div class="tab-pane fade" id="tab-sites"><div id="zone-sites"></div></div>
+                        <div class="tab-pane fade" id="tab-donnees"><div id="zone-donnees"></div></div>
+                        <div class="tab-pane fade" id="tab-journal"><div id="zone-journal"></div></div>
+                    </div>
+                </div>`;
+
+            await this._renderEntreprise();
+            await this._renderTypes();
+            await this._renderPrest();
+            await this._renderSites();
+            await this._renderDonnees();
+            await this._renderJournal();
+        },
+
+        async _renderEntreprise() {
+            const e = await DB.getConfig('entreprise') || { nom:'AGRIWATT', telephone:'', email:'', adresse:'' };
+            document.getElementById('zone-entreprise').innerHTML = `
+                <form id="form-entreprise" class="card p-3">
+                    <div class="mb-2"><label class="form-label">Nom</label><input class="form-control" name="nom" value="${Helpers.esc(e.nom||'')}"></div>
+                    <div class="mb-2"><label class="form-label">Telephone</label><input class="form-control" name="telephone" value="${Helpers.esc(e.telephone||'')}"></div>
+                    <div class="mb-2"><label class="form-label">Email</label><input class="form-control" name="email" value="${Helpers.esc(e.email||'')}"></div>
+                    <div class="mb-2"><label class="form-label">Adresse</label><textarea class="form-control" name="adresse" rows="2">${Helpers.esc(e.adresse||'')}</textarea></div>
+                    <button class="btn btn-primary mt-2">Enregistrer</button>
+                </form>`;
+            document.getElementById('form-entreprise').addEventListener('submit', async (ev) => {
+                ev.preventDefault();
+                const fd = new FormData(ev.target);
+                await DB.setConfig('entreprise', Object.fromEntries(fd.entries()));
+                DataSync.markDirty();
+                showToast('Entreprise enregistree');
+            });
+        },
+
+        async _renderTypes() {
+            const types = await DB.listTypesDechets();
+            document.getElementById('zone-types').innerHTML = `
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <strong>Types de dechets (codes LoW)</strong>
+                        <button class="btn btn-sm btn-success" id="btn-type-add">&#x2795; Ajouter</button>
+                    </div>
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Code LoW</th><th>Designation</th><th class="text-center">Dangereux</th><th></th></tr></thead>
+                        <tbody id="tbody-types">
+                            ${types.map(t => `
+                                <tr data-id="${t.id}">
+                                    <td><span class="badge-low">${Helpers.esc(t.codeLow)}</span></td>
+                                    <td>${Helpers.esc(t.designation)}</td>
+                                    <td class="text-center">${t.dangereux ? '<span class="badge-danger-dechet">DANGEREUX</span>' : '-'}</td>
+                                    <td class="text-end" style="white-space:nowrap">
+                                        <button class="btn btn-sm btn-outline-secondary" data-edit-type="${t.id}">Modifier</button>
+                                        <button class="btn btn-sm btn-outline-danger" data-del-type="${t.id}">Suppr.</button>
+                                    </td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            document.getElementById('btn-type-add').onclick = () => this._editType(null);
+            document.querySelectorAll('[data-edit-type]').forEach(b => b.onclick = () => this._editType(b.dataset.editType));
+            document.querySelectorAll('[data-del-type]').forEach(b => b.onclick = async () => {
+                if (confirm('Supprimer ce type de dechet ?')) {
+                    await DB.deleteTypeDechet(b.dataset.delType);
+                    DataSync.markDirty();
+                    this._renderTypes();
+                }
+            });
+        },
+
+        async _editType(id) {
+            const t = id ? await DB.getTypeDechet(id) : { codeLow:'', designation:'', dangereux:false };
+            const codeLow = prompt('Code LoW (ex: 20 03 01, ajouter * si dangereux) :', t.codeLow);
+            if (codeLow === null) return;
+            const designation = prompt('Designation :', t.designation);
+            if (designation === null) return;
+            const dangereux = confirm('Ce dechet est-il dangereux ? (OK = oui)');
+            const data = { codeLow: codeLow.trim(), designation: designation.trim(), dangereux };
+            if (id) data.id = Number(id);
+            await DB.saveTypeDechet(data);
+            DataSync.markDirty();
+            this._renderTypes();
+        },
+
+        async _renderPrest() {
+            const prest = await DB.listPrestataires();
+            document.getElementById('zone-prest').innerHTML = `
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <strong>Prestataires de collecte / traitement</strong>
+                        <button class="btn btn-sm btn-success" id="btn-prest-add">&#x2795; Ajouter</button>
+                    </div>
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Nom</th><th>SIRET</th><th>Email</th><th>Tel</th><th></th></tr></thead>
+                        <tbody>
+                            ${prest.map(p => `
+                                <tr>
+                                    <td><strong>${Helpers.esc(p.nom)}</strong></td>
+                                    <td>${Helpers.esc(p.siret||'')}</td>
+                                    <td>${Helpers.esc(p.email||'')}</td>
+                                    <td>${Helpers.esc(p.telephone||'')}</td>
+                                    <td class="text-end" style="white-space:nowrap">
+                                        <button class="btn btn-sm btn-outline-secondary" data-edit-prest="${p.id}">Modifier</button>
+                                        <button class="btn btn-sm btn-outline-danger" data-del-prest="${p.id}">Suppr.</button>
+                                    </td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            document.getElementById('btn-prest-add').onclick = () => this._editPrest(null);
+            document.querySelectorAll('[data-edit-prest]').forEach(b => b.onclick = () => this._editPrest(b.dataset.editPrest));
+            document.querySelectorAll('[data-del-prest]').forEach(b => b.onclick = async () => {
+                if (confirm('Supprimer ce prestataire ?')) {
+                    await DB.deletePrestataire(b.dataset.delPrest);
+                    DataSync.markDirty();
+                    this._renderPrest();
+                }
+            });
+        },
+
+        async _editPrest(id) {
+            const p = id ? await DB.getPrestataire(id) : { nom:'', siret:'', email:'', telephone:'' };
+            const nom = prompt('Nom :', p.nom);
+            if (nom === null) return;
+            const siret = prompt('SIRET :', p.siret || '');
+            if (siret === null) return;
+            const email = prompt('Email :', p.email || '');
+            if (email === null) return;
+            const telephone = prompt('Telephone :', p.telephone || '');
+            if (telephone === null) return;
+            const data = { nom: nom.trim(), siret: siret.trim(), email: email.trim(), telephone: telephone.trim() };
+            if (id) data.id = Number(id);
+            await DB.savePrestataire(data);
+            DataSync.markDirty();
+            this._renderPrest();
+        },
+
+        async _renderSites() {
+            const sites = await DB.listSites();
+            document.getElementById('zone-sites').innerHTML = `
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <strong>Sites (agences / chantiers)</strong>
+                        <button class="btn btn-sm btn-success" id="btn-site-add">&#x2795; Ajouter</button>
+                    </div>
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Nom</th><th>Type</th><th>Adresse</th><th></th></tr></thead>
+                        <tbody>
+                            ${sites.map(s => `
+                                <tr>
+                                    <td><strong>${Helpers.esc(s.nom)}</strong></td>
+                                    <td><span class="badge bg-secondary">${Helpers.esc(s.type||'')}</span></td>
+                                    <td>${Helpers.esc(s.adresse||'')}</td>
+                                    <td class="text-end" style="white-space:nowrap">
+                                        <button class="btn btn-sm btn-outline-secondary" data-edit-site="${s.id}">Modifier</button>
+                                        <button class="btn btn-sm btn-outline-danger" data-del-site="${s.id}">Suppr.</button>
+                                    </td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            document.getElementById('btn-site-add').onclick = () => this._editSite(null);
+            document.querySelectorAll('[data-edit-site]').forEach(b => b.onclick = () => this._editSite(b.dataset.editSite));
+            document.querySelectorAll('[data-del-site]').forEach(b => b.onclick = async () => {
+                if (confirm('Supprimer ce site ?')) {
+                    await DB.deleteSite(b.dataset.delSite);
+                    DataSync.markDirty();
+                    this._renderSites();
+                }
+            });
+        },
+
+        async _editSite(id) {
+            const s = id ? await DB.getSite(id) : { nom:'', type:'chantier', adresse:'' };
+            const nom = prompt('Nom du site :', s.nom);
+            if (nom === null) return;
+            const type = prompt('Type (agence ou chantier) :', s.type || 'chantier');
+            if (type === null) return;
+            const adresse = prompt('Adresse :', s.adresse || '');
+            if (adresse === null) return;
+            const data = { nom: nom.trim(), type: (type.trim()||'chantier'), adresse: adresse.trim() };
+            if (id) data.id = Number(id);
+            await DB.saveSite(data);
+            DataSync.markDirty();
+            this._renderSites();
+        },
+
+        async _renderDonnees() {
+            document.getElementById('zone-donnees').innerHTML = `
+                <div class="card p-3 mb-3">
+                    <strong class="d-block mb-2">Synchronisation SharePoint</strong>
+                    <p class="text-muted small mb-2">Dossier : <code>${APP_CONFIG.SHAREPOINT_SITE_PATH}/${APP_CONFIG.DATA_FOLDER_PATH}/${APP_CONFIG.DATA_FILE_NAME}</code></p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" id="btn-force-save">&#x1F4BE; Sauvegarder maintenant</button>
+                        <button class="btn btn-outline-secondary" id="btn-force-pull">&#x1F504; Recharger depuis SharePoint</button>
+                    </div>
+                </div>
+
+                <div class="card p-3 mb-3">
+                    <strong class="d-block mb-2">Export / Import Excel</strong>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-success" id="btn-export-xlsx">&#x1F4C4; Exporter registre Excel</button>
+                        <label class="btn btn-outline-secondary mb-0">
+                            &#x1F4E5; Importer (.xlsx)
+                            <input type="file" id="file-import" hidden accept=".xlsx,.xls">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card p-3" style="border:2px solid #dc3545">
+                    <strong class="d-block mb-2 text-danger">Zone dangereuse</strong>
+                    <p class="text-muted small">Reinitialise toutes les donnees locales (irreversible).</p>
+                    <button class="btn btn-outline-danger" id="btn-reset-all">&#x26A0;&#xFE0F; Reinitialiser toutes les donnees</button>
+                </div>`;
+
+            document.getElementById('btn-force-save').onclick = () => DataSync.save();
+            document.getElementById('btn-force-pull').onclick = async () => {
+                const ok = await DataSync._loadFromRemote();
+                if (ok) { showToast('Donnees rechargees'); App.route(); }
+                else showToast('Rien a charger depuis SharePoint', 'warning');
+            };
+            document.getElementById('btn-export-xlsx').onclick = () => ExcelExport.registre();
+            document.getElementById('file-import').onchange = (ev) => ExcelExport.import(ev.target.files[0]);
+            document.getElementById('btn-reset-all').onclick = async () => {
+                if (!confirm('Confirmer la reinitialisation complete ? Cette action est irreversible.')) return;
+                if (!confirm('VRAIMENT sur ? Toutes les donnees locales seront perdues.')) return;
+                await db.delete();
+                localStorage.clear();
+                location.reload();
+            };
+        },
+
+        async _renderJournal() {
+            const entries = ActivityLog.list();
+            document.getElementById('zone-journal').innerHTML = `
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <strong>Journal d'activite (200 derniers)</strong>
+                        <button class="btn btn-sm btn-outline-danger" id="btn-clear-log">Effacer</button>
+                    </div>
+                    ${entries.length === 0 ? '<p class="text-muted m-0">Aucune entree.</p>' :
+                        '<table class="table table-sm"><thead><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Details</th></tr></thead><tbody>' +
+                        entries.map(e => `
+                            <tr>
+                                <td class="small">${Helpers.esc(new Date(e.ts).toLocaleString('fr-FR'))}</td>
+                                <td>${Helpers.esc(e.user||'')}</td>
+                                <td><code>${Helpers.esc(e.action)}</code></td>
+                                <td class="small text-muted">${Helpers.esc(JSON.stringify(e.details))}</td>
+                            </tr>`).join('') + '</tbody></table>'}
+                </div>`;
+            document.getElementById('btn-clear-log').onclick = () => {
+                if (confirm('Effacer le journal local ?')) {
+                    ActivityLog.clear();
+                    this._renderJournal();
+                }
+            };
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- EXPORT EXCEL                                                  -->
+    <!-- ============================================================= -->
+    <script>
+    const ExcelExport = {
+        async registre() {
+            const enlevements = await DB.listEnlevements();
+            const sites = await DB.listSites();
+            const siteMap = Object.fromEntries(sites.map(s => [s.id, s]));
+
+            const rows = enlevements.map(e => ({
+                'Date enlevement':       Helpers.formatDateFR(e.date),
+                'Code dechet (LoW)':     e.codeLow || '',
+                'Designation':           e.typeDechetDesignation || '',
+                'Dangereux':             e.dangereux ? 'OUI' : 'non',
+                'Quantite':              e.quantite,
+                'Unite':                 e.unite || 'kg',
+                'Quantite (kg eq.)':     Math.round(tonnesEquiv(e.quantite, e.unite) * 1000),
+                'Site producteur':       e.siteNom || '',
+                'Adresse site':          siteMap[e.siteId]?.adresse || '',
+                'Conditionnement':       e.contenant || '',
+                'Mode traitement (R/D)': e.modeTraitement || '',
+                'N° BSD':                e.numeroBsd || '',
+                'Transporteur':          e.transporteurNom || '',
+                'Installation destination': e.destinationNom || '',
+                'SIRET destination':     e.destinationSiret || '',
+                'Prestataire':           e.prestataireNom || '',
+                'N° facture':            e.numeroFacture || '',
+                'Observations':          e.observations || '',
+                'Saisi par':             e.saisiPar || ''
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [
+                {wch:14},{wch:12},{wch:40},{wch:10},{wch:10},{wch:8},{wch:14},
+                {wch:22},{wch:30},{wch:14},{wch:20},{wch:18},{wch:22},{wch:28},
+                {wch:16},{wch:22},{wch:16},{wch:40},{wch:20}
+            ];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Registre dechets');
+
+            const today = new Date().toISOString().slice(0,10);
+            XLSX.writeFile(wb, `Registre_dechets_AGRIWATT_${today}.xlsx`);
+            ActivityLog.log('export_excel', { count: enlevements.length });
+            showToast('Export Excel genere');
+        },
+
+        async import(file) {
+            if (!file) return;
+            if (!confirm('Importer un fichier Excel ajoute des enlevements. Continuer ?')) return;
+            try {
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf);
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws);
+                let nb = 0;
+                for (const r of rows) {
+                    const data = {
+                        date: r['Date enlevement'] ? this._parseDate(r['Date enlevement']) : Helpers.todayISO(),
+                        codeLow: r['Code dechet (LoW)'] || '',
+                        typeDechetDesignation: r['Designation'] || '',
+                        dangereux: String(r['Dangereux']||'').toUpperCase() === 'OUI',
+                        quantite: Number(r['Quantite']) || 0,
+                        unite: r['Unite'] || 'kg',
+                        siteNom: r['Site producteur'] || '',
+                        contenant: r['Conditionnement'] || '',
+                        modeTraitement: r['Mode traitement (R/D)'] || '',
+                        numeroBsd: r['N° BSD'] || '',
+                        transporteurNom: r['Transporteur'] || '',
+                        destinationNom: r['Installation destination'] || '',
+                        destinationSiret: r['SIRET destination'] || '',
+                        prestataireNom: r['Prestataire'] || '',
+                        numeroFacture: r['N° facture'] || '',
+                        observations: r['Observations'] || '',
+                        saisiPar: r['Saisi par'] || ''
+                    };
+                    await DB.saveEnlevement(data);
+                    nb++;
+                }
+                DataSync.markDirty();
+                showToast(`${nb} enlevement(s) importe(s)`);
+                App.route();
+            } catch (e) {
+                console.error(e);
+                showToast('Erreur import Excel', 'danger');
+            }
+        },
+        _parseDate(s) {
+            if (!s) return Helpers.todayISO();
+            if (typeof s === 'number') {
+                // Excel date serial
+                const d = XLSX.SSF.parse_date_code(s);
+                if (d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+            }
+            const m = String(s).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+            if (m) {
+                const y = m[3].length === 2 ? '20'+m[3] : m[3];
+                return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+            }
+            return Helpers.todayISO();
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- EXPORT PDF                                                    -->
+    <!-- ============================================================= -->
+    <script>
+    const PdfExport = {
+        async generate(id) {
+            const e = await DB.getEnlevement(id);
+            if (!e) { showToast('Enlevement introuvable', 'danger'); return; }
+
+            const entreprise = await DB.getConfig('entreprise') || {};
+            const logo = await AppLogo.getBase64();
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            const pageW = doc.internal.pageSize.getWidth();
+            let y = 12;
+
+            // Logo
+            if (logo) {
+                try { doc.addImage(logo, 'PNG', 12, y, 30, 12); } catch (_) {}
+            }
+
+            doc.setFontSize(16);
+            doc.setTextColor(0, 105, 62);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Enlevement de dechets N° ${e.id}`, pageW / 2, y + 6, { align: 'center' });
+
+            doc.setFontSize(10);
+            doc.setTextColor(80);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Date : ${Helpers.formatDateFR(e.date)}`, pageW - 12, y + 6, { align: 'right' });
+
+            y += 22;
+
+            // Tableau infos
+            const lines = [
+                ['Site producteur', e.siteNom || ''],
+                ['Code dechet (LoW)', `${e.codeLow || ''}${e.dangereux ? '  [DECHET DANGEREUX]' : ''}`],
+                ['Designation', e.typeDechetDesignation || ''],
+                ['Quantite', `${e.quantite} ${e.unite || 'kg'}`],
+                ['Conditionnement', e.contenant || ''],
+                ['Prestataire', e.prestataireNom || ''],
+                ['N° BSD', e.numeroBsd || ''],
+                ['Mode de traitement', e.modeTraitement || ''],
+                ['Installation destination', e.destinationNom || ''],
+                ['SIRET destination', e.destinationSiret || ''],
+                ['Transporteur', e.transporteurNom || ''],
+                ['N° facture', e.numeroFacture || ''],
+                ['Saisi par', e.saisiPar || '']
+            ];
+
+            doc.autoTable({
+                startY: y,
+                head: [['Champ', 'Valeur']],
+                body: lines,
+                styles: { fontSize: 10, cellPadding: 2 },
+                headStyles: { fillColor: [0, 105, 62], textColor: 255 },
+                columnStyles: { 0: { cellWidth: 60, fontStyle: 'bold' }, 1: { cellWidth: pageW - 60 - 24 } },
+                margin: { left: 12, right: 12 }
+            });
+
+            y = doc.lastAutoTable.finalY + 6;
+
+            if (e.observations) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.text('Observations :', 12, y);
+                y += 5;
+                doc.setFont('helvetica', 'normal');
+                const split = doc.splitTextToSize(e.observations, pageW - 24);
+                doc.text(split, 12, y);
+                y += split.length * 5 + 4;
+            }
+
+            if (e.photo) {
+                try {
+                    const props = doc.getImageProperties(e.photo);
+                    const w = pageW - 24;
+                    const h = (props.height * w) / props.width;
+                    if (y + h > 270) { doc.addPage(); y = 12; }
+                    doc.addImage(e.photo, 'JPEG', 12, y, w, Math.min(h, 150));
+                    y += Math.min(h, 150) + 4;
+                } catch (_) {}
+            }
+
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(120);
+            doc.text(
+                'Document de tracabilite interne - Registre chronologique art. R541-43 du Code de l\'environnement',
+                pageW / 2, 285, { align: 'center' }
+            );
+            doc.text(`${entreprise.nom || 'AGRIWATT'} - Genere le ${new Date().toLocaleString('fr-FR')}`,
+                pageW / 2, 290, { align: 'center' });
+
+            const filename = `Enlevement_${e.id}_${e.date}_${(e.codeLow||'').replace(/[* ]/g,'')}.pdf`;
+            doc.save(filename);
+            ActivityLog.log('export_pdf', { id: e.id });
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- APP : routeur SPA + init                                      -->
+    <!-- ============================================================= -->
+    <script>
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const id = 'toast-' + Date.now();
+        container.insertAdjacentHTML('beforeend', `
+            <div id="${id}" class="toast align-items-center text-bg-${type}" role="alert" aria-live="assertive">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>`);
+        const toastEl = document.getElementById(id);
+        const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    }
+
+    const App = {
+        pages: {
+            'dashboard':        DashboardPage,
+            'enlevement-list':  EnlevementListPage,
+            'enlevement-new':   EnlevementFormPage,
+            'enlevement-edit':  EnlevementFormPage,
+            'config':           ConfigPage
+        },
+
+        init() {
+            window.addEventListener('hashchange', () => this.route());
+
+            const navCollapse = document.getElementById('navbarNav');
+            document.querySelectorAll('[data-page]').forEach(link => {
+                link.addEventListener('click', e => {
+                    e.preventDefault();
+                    location.hash = '#' + link.dataset.page;
+                    if (navCollapse && navCollapse.classList.contains('show')) {
+                        bootstrap.Collapse.getInstance(navCollapse)?.hide();
+                    }
+                });
+            });
+
+            if (!location.hash || location.hash === '#') location.hash = '#dashboard';
+            this.route();
+        },
+
+        async route() {
+            const hash   = location.hash.slice(1) || 'dashboard';
+            const parts  = hash.split('/');
+            const page   = parts[0];
+            const params = parts.slice(1);
+
+            if (typeof DataSync !== 'undefined' && DataSync._applyPendingIfAny) {
+                await DataSync._applyPendingIfAny();
+            }
+
+            const pageModule = this.pages[page];
+            const container  = document.getElementById('app-content');
+
+            if (pageModule) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>`;
+                try {
+                    await pageModule.render(container, ...params);
+                } catch (err) {
+                    console.error('Erreur page:', err);
+                    container.innerHTML = `
+                        <div class="alert alert-danger m-3">
+                            ⚠️ Erreur lors du chargement de la page : ${err.message}
+                        </div>`;
+                }
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-warning m-3">
+                        ❓ Page introuvable. <a href="#dashboard">Retour au tableau de bord</a>
+                    </div>`;
+            }
+
+            DataSync._refreshReminder();
+
+            document.querySelectorAll('.navbar-nav [data-page]').forEach(link => {
+                link.classList.toggle('active', link.dataset.page === page);
+            });
+            document.querySelectorAll('.bottom-nav-item[data-page]').forEach(item => {
+                item.classList.toggle('active', item.dataset.page === page);
+            });
+            window.scrollTo(0, 0);
+        },
+
+        async _initSyncUI() {
+            const navContainer = document.querySelector('.navbar .container-fluid');
+            if (!navContainer) return;
+            const toggler = navContainer.querySelector('.navbar-toggler');
+            const syncDiv = document.createElement('div');
+            syncDiv.className = 'd-flex align-items-center gap-1 ms-auto me-2 order-lg-last me-lg-0';
+            syncDiv.id = 'sync-buttons';
+            syncDiv.innerHTML = `
+                <button class="btn btn-outline-light btn-sm" id="btn-connect-folder" title="Connecter SharePoint">
+                    \u{1F517}<span class="ms-1">Connecter</span>
+                </button>
+                <button class="btn btn-outline-light btn-sm" id="btn-save-data" title="Sauvegarder" style="display:none">
+                    \u{1F4BE}<span class="ms-1">Sauvegarder</span>
+                    <span class="badge bg-danger d-none" id="sync-badge">!</span>
+                </button>`;
+            if (toggler) navContainer.insertBefore(syncDiv, toggler);
+            else navContainer.appendChild(syncDiv);
+
+            document.getElementById('btn-save-data').onclick = () => DataSync.save();
+
+            const state = await DataSync.autoConnect();
+            DataSync.updateConnectButton(state);
+
+            if (state === 'connected') {
+                App.route();
+                const others = await DataSync.getActiveUsers();
+                DataSync._updatePresenceBanner(others);
+            } else {
+                DataSync.showConnectReminder();
+            }
+        }
+    };
+
+    /* ---------- Demarrage ---------- */
+    document.addEventListener('DOMContentLoaded', () => {
+        db.open()
+            .then(async () => {
+                await ensureSeed();
+            })
+            .then(async () => {
+                if (window._appLoaded) window._appLoaded();
+                App.init();
+                await App._initSyncUI();
+                DataSync.setupBeforeUnload();
+                DataSync.startPolling();
+                if (!DataSync._loadedSnapshot) await DataSync._captureSnapshot();
+            })
+            .catch(err => {
+                console.error('DB error:', err);
+                document.getElementById('app-content').innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        ⚠️ Erreur de base de donnees : ${err.message}
+                    </div>`;
+            });
+    });
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- PWA : Service Worker                                          -->
+    <!-- ============================================================= -->
+    <script>
+    window.APP_BUILD = '2026-05-19';
+    console.log('Suivi Dechets Build:', window.APP_BUILD);
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW enregistre:', reg.scope))
+            .catch(err => console.warn('SW erreur:', err));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const v = document.createElement('div');
+        v.style.cssText = 'position:fixed;bottom:2px;right:5px;font-size:10px;color:#aaa;z-index:1;pointer-events:none;';
+        v.textContent = 'PWA ' + window.APP_BUILD;
+        document.body.appendChild(v);
+    });
+    </script>
+</body>
+</html>
+
