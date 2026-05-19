@@ -91,6 +91,19 @@
             font-size: 0.85rem;
         }
 
+        .badge-trackdechets {
+            display: inline-block;
+            background: var(--agw-green);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 6px;
+            margin-left: 4px;
+            letter-spacing: 0.4px;
+            vertical-align: middle;
+        }
+
         .table thead th {
             background: var(--agw-green);
             color: #fff;
@@ -348,6 +361,21 @@
         sites:         '++id, nom, type',
         utilisateurs:  'id, nom, agence',
         config:        'id'
+    });
+
+    // v2 : ajout de l'integration Trackdechets (lecture seule) - migration non destructive
+    db.version(2).stores({
+        enlevements:   '++id, date, siteId, typeDechetId, prestataireId, numeroBsd, source, trackdechetsId',
+        types_dechets: '++id, codeLow, designation, dangereux',
+        prestataires:  '++id, nom, siret',
+        sites:         '++id, nom, type',
+        utilisateurs:  'id, nom, agence',
+        config:        'id'
+    }).upgrade(tx => {
+        // Marque tous les enlevements existants comme "manuel" (defaut)
+        return tx.table('enlevements').toCollection().modify(e => {
+            if (!e.source) e.source = 'manuel';
+        });
     });
 
     /* ---------- Seed donnees ---------- */
@@ -1211,6 +1239,8 @@
                 if (e.numeroBsd) nbBsd++;
             }
 
+            const nbTdMois = enlMois.filter(e => e.source === 'trackdechets').length;
+
             // Top types
             const topTypes = {};
             for (const e of enlAnnee) {
@@ -1289,6 +1319,12 @@
                             <div class="kpi-card">
                                 <div class="kpi-value">${(tonnesDang + tonnesNonDang).toFixed(2)} t</div>
                                 <div class="kpi-label">Tonnage total ${anneeCourante}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="kpi-card" style="border-left-color:var(--agw-green)">
+                                <div class="kpi-value">${nbTdMois}</div>
+                                <div class="kpi-label">Importes Trackdechets ce mois</div>
                             </div>
                         </div>
                     </div>
@@ -1484,7 +1520,10 @@
                             </td>
                             <td class="text-end fw-bold">${Helpers.esc(e.quantite)} ${Helpers.esc(e.unite || 'kg')}</td>
                             <td>${Helpers.esc(e.prestataireNom || '')}</td>
-                            <td>${Helpers.esc(e.numeroBsd || '-')}</td>
+                            <td>
+                                ${Helpers.esc(e.numeroBsd || '-')}
+                                ${e.source === 'trackdechets' ? '<span class="badge-trackdechets" title="Importe depuis Trackdechets">TD</span>' : ''}
+                            </td>
                             <td class="text-center" style="white-space:nowrap">
                                 <button class="btn btn-sm btn-outline-primary" data-pdf="${e.id}" title="PDF">&#x1F4C4;</button>
                                 <a class="btn btn-sm btn-outline-secondary" href="#enlevement-edit/${e.id}" title="Modifier">&#x270F;&#xFE0F;</a>
@@ -1551,9 +1590,22 @@
                 return;
             }
 
+            const isTd = isEdit && enl && enl.source === 'trackdechets';
+
             container.innerHTML = `
                 <div class="container">
                     <h2 class="mb-3">${isEdit ? '&#x270F;&#xFE0F; Modifier' : '&#x2795; Nouvel'} enlevement</h2>
+
+                    ${isTd ? `
+                        <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
+                            <span style="font-size:1.4em">&#x26A0;&#xFE0F;</span>
+                            <div>
+                                <strong>Cet enlevement provient de Trackdechets</strong>
+                                ${enl.trackdechetsReadableId ? ' (BSD : ' + Helpers.esc(enl.trackdechetsReadableId) + ')' : ''}.
+                                Les champs reglementaires sont verrouilles et synchronises automatiquement.
+                                Vous pouvez modifier uniquement les <strong>observations</strong>, la <strong>photo</strong> et le <strong>n&deg; de facture</strong>.
+                            </div>
+                        </div>` : ''}
 
                     <form id="enl-form" autocomplete="off">
                         <div class="row g-4">
@@ -1695,6 +1747,19 @@
             typeSelect.addEventListener('change', updateBsdRequired);
             updateBsdRequired();
 
+            // Verrouillage des champs reglementaires pour les enlevements importes de Trackdechets
+            if (isTd) {
+                const lockedNames = [
+                    'date', 'siteId', 'typeDechetId', 'quantite', 'unite', 'contenant',
+                    'prestataireId', 'numeroBsd', 'modeTraitement',
+                    'destinationNom', 'destinationSiret', 'transporteurNom'
+                ];
+                lockedNames.forEach(n => {
+                    const el = container.querySelector(`[name="${n}"]`);
+                    if (el) { el.disabled = true; el.classList.add('bg-light'); }
+                });
+            }
+
             // Gestion photo
             const photoInput = container.querySelector('#photo-input');
             const previewZone = container.querySelector('#photo-preview-zone');
@@ -1732,33 +1797,46 @@
                 const siteOpt = container.querySelector('select[name="siteId"]').selectedOptions[0];
                 const prestOpt = container.querySelector('select[name="prestataireId"]').selectedOptions[0];
 
-                const data = {
-                    date: fd.get('date'),
-                    siteId: Number(fd.get('siteId')) || null,
-                    siteNom: siteOpt ? siteOpt.textContent.replace(/ \([^)]+\)$/, '') : '',
-                    typeDechetId: Number(fd.get('typeDechetId')) || null,
-                    typeDechetDesignation: typeOpt ? typeOpt.dataset.des : '',
-                    codeLow: typeOpt ? typeOpt.dataset.low : '',
-                    dangereux: typeOpt && typeOpt.dataset.dang === '1',
-                    quantite: Number(fd.get('quantite')) || 0,
-                    unite: fd.get('unite') || 'kg',
-                    contenant: fd.get('contenant') || '',
-                    prestataireId: Number(fd.get('prestataireId')) || null,
-                    prestataireNom: prestOpt && prestOpt.value ? prestOpt.textContent : '',
-                    numeroBsd: (fd.get('numeroBsd') || '').trim(),
-                    modeTraitement: fd.get('modeTraitement') || '',
-                    destinationNom: (fd.get('destinationNom') || '').trim(),
-                    destinationSiret: (fd.get('destinationSiret') || '').trim(),
-                    transporteurNom: (fd.get('transporteurNom') || '').trim(),
-                    numeroFacture: (fd.get('numeroFacture') || '').trim(),
-                    observations: (fd.get('observations') || '').trim(),
-                    photo: currentPhoto || '',
-                    saisiPar: enl.saisiPar || (DataSync.getUserName ? DataSync.getUserName() : '')
-                };
+                let data;
+                if (isTd) {
+                    // Enlevement importe de Trackdechets : on conserve TOUS les champs reglementaires
+                    // et on autorise uniquement la modification de observations / photo / n° facture.
+                    data = {
+                        ...enl,
+                        observations:  (fd.get('observations')  || '').trim(),
+                        numeroFacture: (fd.get('numeroFacture') || '').trim(),
+                        photo:         currentPhoto || ''
+                    };
+                } else {
+                    data = {
+                        source: enl.source || 'manuel',
+                        date: fd.get('date'),
+                        siteId: Number(fd.get('siteId')) || null,
+                        siteNom: siteOpt ? siteOpt.textContent.replace(/ \([^)]+\)$/, '') : '',
+                        typeDechetId: Number(fd.get('typeDechetId')) || null,
+                        typeDechetDesignation: typeOpt ? typeOpt.dataset.des : '',
+                        codeLow: typeOpt ? typeOpt.dataset.low : '',
+                        dangereux: typeOpt && typeOpt.dataset.dang === '1',
+                        quantite: Number(fd.get('quantite')) || 0,
+                        unite: fd.get('unite') || 'kg',
+                        contenant: fd.get('contenant') || '',
+                        prestataireId: Number(fd.get('prestataireId')) || null,
+                        prestataireNom: prestOpt && prestOpt.value ? prestOpt.textContent : '',
+                        numeroBsd: (fd.get('numeroBsd') || '').trim(),
+                        modeTraitement: fd.get('modeTraitement') || '',
+                        destinationNom: (fd.get('destinationNom') || '').trim(),
+                        destinationSiret: (fd.get('destinationSiret') || '').trim(),
+                        transporteurNom: (fd.get('transporteurNom') || '').trim(),
+                        numeroFacture: (fd.get('numeroFacture') || '').trim(),
+                        observations: (fd.get('observations') || '').trim(),
+                        photo: currentPhoto || '',
+                        saisiPar: enl.saisiPar || (DataSync.getUserName ? DataSync.getUserName() : '')
+                    };
+                }
 
                 if (isEdit) data.id = enl.id;
 
-                if (data.dangereux && !data.numeroBsd) {
+                if (!isTd && data.dangereux && !data.numeroBsd) {
                     showToast('Le numero BSD est obligatoire pour les dechets dangereux', 'warning');
                     return;
                 }
@@ -1804,6 +1882,7 @@
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-types" type="button">Types de dechets</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-prest" type="button">Prestataires</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sites" type="button">Sites</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-trackdechets" type="button">Trackdechets</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-donnees" type="button">Donnees</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-journal" type="button">Journal</button></li>
                     </ul>
@@ -1813,8 +1892,38 @@
                         <div class="tab-pane fade" id="tab-types"><div id="zone-types"></div></div>
                         <div class="tab-pane fade" id="tab-prest"><div id="zone-prest"></div></div>
                         <div class="tab-pane fade" id="tab-sites"><div id="zone-sites"></div></div>
+                        <div class="tab-pane fade" id="tab-trackdechets"><div id="zone-trackdechets"></div></div>
                         <div class="tab-pane fade" id="tab-donnees"><div id="zone-donnees"></div></div>
                         <div class="tab-pane fade" id="tab-journal"><div id="zone-journal"></div></div>
+                    </div>
+                </div>
+
+                <!-- Modale d'aide token Trackdechets -->
+                <div class="modal fade" id="modal-td-help" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Comment obtenir un token API Trackdechets ?</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body">
+                                <ol class="mb-3">
+                                    <li>Connectez-vous sur <a href="https://app.trackdechets.beta.gouv.fr" target="_blank" rel="noopener">https://app.trackdechets.beta.gouv.fr</a> avec votre compte AGRIWATT.</li>
+                                    <li>Ouvrez le menu utilisateur (en haut a droite) puis <strong>&laquo; Mon compte &raquo;</strong>.</li>
+                                    <li>Allez sur la page <a href="https://app.trackdechets.beta.gouv.fr/account/api-keys" target="_blank" rel="noopener">Cles d'API</a>.</li>
+                                    <li>Cliquez sur <strong>&laquo; Generer un nouveau token &raquo;</strong> et donnez-lui un libelle (ex. &laquo; PWA suividechets &raquo;).</li>
+                                    <li>Copiez le token affiche (il ne sera plus visible apres) et collez-le dans le champ <strong>Token API</strong> ci-contre.</li>
+                                    <li>Renseignez aussi le <strong>SIRET</strong> de l'etablissement emetteur (celui qui figure sur vos BSDD).</li>
+                                    <li>Cliquez sur <strong>Tester la connexion</strong> pour valider.</li>
+                                </ol>
+                                <div class="alert alert-warning small mb-0">
+                                    Le token donne acces a vos donnees Trackdechets. Il est stocke uniquement dans cette application (IndexedDB) et n'est jamais envoye ailleurs que vers <code>api.trackdechets.beta.gouv.fr</code>.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                            </div>
+                        </div>
                     </div>
                 </div>`;
 
@@ -1822,6 +1931,7 @@
             await this._renderTypes();
             await this._renderPrest();
             await this._renderSites();
+            await this._renderTrackdechets();
             await this._renderDonnees();
             await this._renderJournal();
         },
@@ -1995,6 +2105,149 @@
             await DB.saveSite(data);
             DataSync.markDirty();
             this._renderSites();
+        },
+
+        async _renderTrackdechets() {
+            const cfg = (await DB.getConfig('trackdechets_config')) || {
+                enabled: false,
+                env: 'production',
+                token: '',
+                siret: '',
+                pollIntervalMin: 60,
+                lastSyncAt: null,
+                lastSyncStatus: null,
+                lastErrorMessage: '',
+                totalImported: 0
+            };
+
+            const lastSyncStr = cfg.lastSyncAt
+                ? new Date(cfg.lastSyncAt).toLocaleString('fr-FR')
+                : 'jamais';
+            const statusBadge = cfg.lastSyncStatus === 'success'
+                ? '<span class="badge bg-success">Derniere sync OK</span>'
+                : cfg.lastSyncStatus === 'error'
+                    ? '<span class="badge bg-danger">Derniere sync en erreur</span>'
+                    : '<span class="badge bg-secondary">Jamais synchronise</span>';
+
+            document.getElementById('zone-trackdechets').innerHTML = `
+                <div class="card p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Integration Trackdechets (lecture seule)</strong>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#modal-td-help">
+                            &#x2139;&#xFE0F; Comment obtenir un token API ?
+                        </button>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        Importe automatiquement les BSDD emis par AGRIWATT sur <a href="https://trackdechets.beta.gouv.fr" target="_blank" rel="noopener">trackdechets.beta.gouv.fr</a>
+                        en tant qu'enlevements dans ce registre. Aucune ecriture n'est effectuee sur Trackdechets.
+                    </p>
+
+                    <form id="form-trackdechets">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="td-enabled" ${cfg.enabled ? 'checked' : ''}>
+                            <label class="form-check-label" for="td-enabled"><strong>Activer l'integration Trackdechets</strong></label>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Environnement</label>
+                                <select class="form-select" id="td-env">
+                                    <option value="production" ${cfg.env === 'production' ? 'selected' : ''}>Production</option>
+                                    <option value="sandbox"    ${cfg.env === 'sandbox'    ? 'selected' : ''}>Sandbox (tests)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">SIRET etablissement emetteur</label>
+                                <input type="text" class="form-control" id="td-siret" maxlength="14" pattern="\\d{14}" value="${Helpers.esc(cfg.siret || '')}" placeholder="14 chiffres">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Intervalle de sync auto (min)</label>
+                                <input type="number" class="form-control" id="td-interval" min="5" max="1440" value="${Number(cfg.pollIntervalMin) || 60}">
+                                <small class="text-muted">Min 5, max 1440 minutes.</small>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">Token API (bearer)</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="td-token" autocomplete="off" value="${Helpers.esc(cfg.token || '')}" placeholder="Token genere depuis votre compte Trackdechets">
+                                <button class="btn btn-outline-secondary" type="button" id="td-token-toggle" title="Afficher/masquer">&#x1F441;&#xFE0F;</button>
+                            </div>
+                            <small class="text-muted">Le token est stocke uniquement dans cette application.</small>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3 flex-wrap">
+                            <button type="button" class="btn btn-primary"          id="td-save">&#x1F4BE; Enregistrer la configuration</button>
+                            <button type="button" class="btn btn-outline-primary"  id="td-test">&#x1F50C; Tester la connexion</button>
+                            <button type="button" class="btn btn-success"          id="td-sync">&#x1F504; Synchroniser maintenant</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card p-3">
+                    <strong class="d-block mb-2">Etat de la synchronisation</strong>
+                    <div class="row small">
+                        <div class="col-md-4"><strong>Derniere sync :</strong> ${Helpers.esc(lastSyncStr)}</div>
+                        <div class="col-md-4"><strong>Statut :</strong> ${statusBadge}</div>
+                        <div class="col-md-4"><strong>BSD importes au total :</strong> ${Number(cfg.totalImported) || 0}</div>
+                    </div>
+                    ${cfg.lastErrorMessage ? `
+                        <div class="alert alert-danger mt-3 mb-0 small">
+                            <strong>Dernier message d'erreur :</strong> ${Helpers.esc(cfg.lastErrorMessage)}
+                        </div>` : ''}
+                </div>`;
+
+            // Toggle visibilite token
+            document.getElementById('td-token-toggle').onclick = () => {
+                const inp = document.getElementById('td-token');
+                inp.type = inp.type === 'password' ? 'text' : 'password';
+            };
+
+            const readForm = () => ({
+                ...cfg,
+                enabled:         document.getElementById('td-enabled').checked,
+                env:             document.getElementById('td-env').value,
+                siret:           document.getElementById('td-siret').value.trim(),
+                token:           document.getElementById('td-token').value.trim(),
+                pollIntervalMin: Math.min(1440, Math.max(5, Number(document.getElementById('td-interval').value) || 60))
+            });
+
+            document.getElementById('td-save').onclick = async () => {
+                const newCfg = readForm();
+                await DB.setConfig('trackdechets_config', newCfg);
+                DataSync.markDirty();
+                if (newCfg.enabled) TrackdechetsSync.startAutoSync();
+                else                TrackdechetsSync.stopAutoSync();
+                showToast('Configuration Trackdechets enregistree');
+                this._renderTrackdechets();
+            };
+
+            document.getElementById('td-test').onclick = async () => {
+                const newCfg = readForm();
+                if (!newCfg.token) { showToast('Token requis', 'warning'); return; }
+                try {
+                    const me = await TrackdechetsAPI.testConnection(newCfg);
+                    showToast(`Connexion OK : ${me.name || me.email || 'compte trouve'}`);
+                } catch (e) {
+                    showToast('Echec de connexion : ' + (e.message || 'erreur'), 'danger');
+                }
+            };
+
+            document.getElementById('td-sync').onclick = async () => {
+                const newCfg = readForm();
+                if (!newCfg.enabled) { showToast('Activez d\'abord l\'integration', 'warning'); return; }
+                if (!newCfg.token || !newCfg.siret) { showToast('Token et SIRET requis', 'warning'); return; }
+                // Enregistre avant de lancer
+                await DB.setConfig('trackdechets_config', newCfg);
+                showToast('Synchronisation en cours...');
+                const r = await TrackdechetsSync.runOnce();
+                if (r.errors) {
+                    showToast('Sync en erreur : ' + ((r.error && r.error.message) || ''), 'danger');
+                } else {
+                    showToast(`Sync OK : ${r.imported} nouveau(x), ${r.skipped} mis a jour`);
+                }
+                this._renderTrackdechets();
+            };
         },
 
         async _renderDonnees() {
@@ -2277,6 +2530,289 @@
     </script>
 
     <!-- ============================================================= -->
+    <!-- TRACKDECHETS : API (lecture seule)                            -->
+    <!-- ============================================================= -->
+    <script>
+    /**
+     * Module d'acces a l'API GraphQL Trackdechets (https://developers.trackdechets.beta.gouv.fr/).
+     * Lecture seule : recupere les BSDD emis par l'etablissement (SIRET) configure et les transforme
+     * en enlevements stockes dans IndexedDB.
+     */
+    const TrackdechetsAPI = {
+        _endpoints: {
+            production: 'https://api.trackdechets.beta.gouv.fr/',
+            sandbox:    'https://api.sandbox.trackdechets.beta.gouv.fr/'
+        },
+
+        async query(config, gql, variables = {}) {
+            const url = this._endpoints[config.env] || this._endpoints.production;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${config.token}`,
+                    'Content-Type':  'application/json'
+                },
+                body: JSON.stringify({ query: gql, variables })
+            });
+            if (!res.ok) {
+                const txt = await res.text().catch(() => '');
+                throw new Error(`HTTP ${res.status}${txt ? ' : ' + txt.slice(0, 200) : ''}`);
+            }
+            const json = await res.json();
+            if (json.errors) {
+                throw new Error(json.errors.map(e => e.message).join(' ; '));
+            }
+            return json.data;
+        },
+
+        async testConnection(config) {
+            const data = await this.query(config, `query { me { name email } }`);
+            return data.me;
+        },
+
+        /**
+         * Recupere les BSDD non-brouillons emis par le SIRET configure.
+         * Filtre updatedAt > since (si fourni) pour ne pas rapatrier tout l'historique.
+         */
+        async fetchBsdds(config, since = null) {
+            const all = [];
+            let cursor = null;
+            let hasNextPage = true;
+            const QUERY = `
+                query($first: Int, $after: ID, $siret: String, $updatedAfter: String) {
+                    bsds(
+                        first: $first,
+                        after: $after,
+                        where: {
+                            emitter: { company: { siret: { _eq: $siret } } },
+                            isDraft: { _eq: false },
+                            updatedAt: { _gt: $updatedAfter }
+                        }
+                    ) {
+                        pageInfo { hasNextPage endCursor }
+                        edges {
+                            node {
+                                ... on Bsdd {
+                                    id
+                                    readableId
+                                    status
+                                    createdAt
+                                    updatedAt
+                                    emitter     { company { name siret address } }
+                                    recipient   { company { name siret address } }
+                                    transporter { company { name siret } }
+                                    wasteDetails {
+                                        code
+                                        name
+                                        quantity
+                                        quantityType
+                                        packagingInfos { type quantity }
+                                    }
+                                    processingOperationDone
+                                    signedAt
+                                    sentAt
+                                    receivedAt
+                                    processedAt
+                                }
+                            }
+                        }
+                    }
+                }
+            `;
+            while (hasNextPage) {
+                const data = await this.query(config, QUERY, {
+                    first: 50,
+                    after: cursor,
+                    siret: config.siret,
+                    updatedAfter: since
+                });
+                const conn = data && data.bsds;
+                if (!conn) break;
+                const edges = conn.edges || [];
+                for (const e of edges) if (e && e.node) all.push(e.node);
+                hasNextPage = conn.pageInfo && conn.pageInfo.hasNextPage;
+                cursor      = conn.pageInfo && conn.pageInfo.endCursor;
+                if (all.length > 500) break; // garde-fou
+            }
+            return all;
+        },
+
+        /**
+         * Convertit un BSDD (objet GraphQL) en enlevement au format suividechets.
+         * Cree au passage les referentiels manquants (type de dechet, prestataire, site)
+         * pour ne pas casser les listes deroulantes en saisie manuelle.
+         */
+        async bsdToEnlevement(bsd) {
+            // Type de dechet via code LoW
+            const codeLow = ((bsd.wasteDetails && bsd.wasteDetails.code) || '').trim();
+            let typeDechet = null;
+            if (codeLow) {
+                typeDechet = await db.types_dechets.where('codeLow').equals(codeLow).first();
+                if (!typeDechet) {
+                    const id = await db.types_dechets.add({
+                        codeLow,
+                        designation: (bsd.wasteDetails && bsd.wasteDetails.name) || codeLow,
+                        dangereux:   codeLow.includes('*')
+                    });
+                    typeDechet = await db.types_dechets.get(id);
+                }
+            }
+
+            // Prestataire = transporteur (collecte)
+            const transNom   = (bsd.transporter && bsd.transporter.company && bsd.transporter.company.name)  || '';
+            const transSiret = (bsd.transporter && bsd.transporter.company && bsd.transporter.company.siret) || '';
+            let prestataire  = null;
+            if (transNom) {
+                prestataire = await db.prestataires.where('nom').equals(transNom).first();
+                if (!prestataire) {
+                    const id = await db.prestataires.add({
+                        nom:       transNom,
+                        siret:     transSiret,
+                        email:     '',
+                        telephone: ''
+                    });
+                    prestataire = await db.prestataires.get(id);
+                }
+            }
+
+            // Site producteur
+            const siteName = (bsd.emitter && bsd.emitter.company && bsd.emitter.company.name) || '';
+            let site = null;
+            if (siteName) {
+                site = await db.sites.where('nom').equals(siteName).first();
+                if (!site) {
+                    const id = await db.sites.add({
+                        nom:     siteName,
+                        adresse: (bsd.emitter && bsd.emitter.company && bsd.emitter.company.address) || '',
+                        type:    'agence'
+                    });
+                    site = await db.sites.get(id);
+                }
+            }
+
+            const dateIso = String(bsd.receivedAt || bsd.signedAt || bsd.sentAt || bsd.createdAt || '').slice(0, 10)
+                || Helpers.todayISO();
+
+            // Quantite (Trackdechets renvoie en tonnes)
+            const qty = (bsd.wasteDetails && Number(bsd.wasteDetails.quantity)) || 0;
+
+            // Conditionnement (premier packaging)
+            const firstPack    = bsd.wasteDetails && bsd.wasteDetails.packagingInfos && bsd.wasteDetails.packagingInfos[0];
+            const contenantMap = { BENNE: 'benne', GRV: 'GRV', FUT: 'fut', BIGBAG: 'bigbag', PALETTE: 'palette' };
+            const contenant    = firstPack ? (contenantMap[firstPack.type] || 'autre') : 'autre';
+
+            return {
+                source:                 'trackdechets',
+                trackdechetsId:         bsd.id,
+                trackdechetsReadableId: bsd.readableId || '',
+                trackdechetsStatus:     bsd.status || '',
+                trackdechetsRaw:        bsd,
+                date:                   dateIso,
+                siteId:                 (site && site.id) || null,
+                siteNom:                siteName,
+                typeDechetId:           (typeDechet && typeDechet.id) || null,
+                typeDechetDesignation:  (typeDechet && typeDechet.designation) || (bsd.wasteDetails && bsd.wasteDetails.name) || '',
+                codeLow,
+                dangereux:              codeLow.includes('*'),
+                quantite:               qty,
+                unite:                  't',
+                contenant,
+                prestataireId:          (prestataire && prestataire.id) || null,
+                prestataireNom:         transNom,
+                numeroBsd:              bsd.readableId || '',
+                modeTraitement:         bsd.processingOperationDone || '',
+                destinationNom:         (bsd.recipient && bsd.recipient.company && bsd.recipient.company.name)  || '',
+                destinationSiret:       (bsd.recipient && bsd.recipient.company && bsd.recipient.company.siret) || '',
+                transporteurNom:        transNom,
+                observations:           '',
+                photo:                  null,
+                numeroFacture:          '',
+                saisiPar:               'Trackdechets',
+                createdAt:              bsd.createdAt || new Date().toISOString(),
+                updatedAt:              bsd.updatedAt || new Date().toISOString()
+            };
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- TRACKDECHETS : orchestrateur de synchronisation               -->
+    <!-- ============================================================= -->
+    <script>
+    const TrackdechetsSync = {
+        _timer: null,
+
+        async runOnce() {
+            const cfg = await DB.getConfig('trackdechets_config');
+            if (!cfg || !cfg.enabled || !cfg.token || !cfg.siret) {
+                return { imported: 0, skipped: 0, errors: 0 };
+            }
+            const since = cfg.lastSyncAt || null;
+            let imported = 0, skipped = 0;
+            try {
+                const bsds = await TrackdechetsAPI.fetchBsdds(cfg, since);
+                for (const bsd of bsds) {
+                    const existing = bsd.id
+                        ? await db.enlevements.where('trackdechetsId').equals(bsd.id).first()
+                        : null;
+                    const enlData = await TrackdechetsAPI.bsdToEnlevement(bsd);
+                    if (existing) {
+                        // Conserve les ajouts locaux (observations, photo, n° facture) qui n'existent pas sur Trackdechets
+                        enlData.id            = existing.id;
+                        enlData.observations  = existing.observations  || '';
+                        enlData.photo         = existing.photo         || null;
+                        enlData.numeroFacture = existing.numeroFacture || '';
+                        await db.enlevements.put(enlData);
+                        skipped++;
+                    } else {
+                        await db.enlevements.add(enlData);
+                        imported++;
+                    }
+                }
+                const newCfg = {
+                    ...cfg,
+                    lastSyncAt:       new Date().toISOString(),
+                    lastSyncStatus:   'success',
+                    lastErrorMessage: '',
+                    totalImported:    (cfg.totalImported || 0) + imported
+                };
+                await DB.setConfig('trackdechets_config', newCfg);
+                if (typeof DataSync !== 'undefined' && DataSync.markDirty) DataSync.markDirty();
+                ActivityLog.log('trackdechets_sync', { imported, skipped });
+                return { imported, skipped, errors: 0 };
+            } catch (e) {
+                // Ne JAMAIS logger token/siret en console
+                console.warn('Trackdechets sync : echec');
+                const newCfg = {
+                    ...cfg,
+                    lastSyncStatus:   'error',
+                    lastErrorMessage: e.message || String(e)
+                };
+                await DB.setConfig('trackdechets_config', newCfg);
+                return { imported: 0, skipped: 0, errors: 1, error: e };
+            }
+        },
+
+        startAutoSync() {
+            if (this._timer) clearInterval(this._timer);
+            DB.getConfig('trackdechets_config').then(cfg => {
+                if (!cfg || !cfg.enabled) return;
+                const intervalMin = Math.min(1440, Math.max(5, cfg.pollIntervalMin || 60));
+                const intervalMs  = intervalMin * 60 * 1000;
+                this._timer = setInterval(() => this.runOnce().catch(() => {}), intervalMs);
+                // Premier run differe de 30 s pour ne pas bloquer le demarrage
+                setTimeout(() => this.runOnce().catch(() => {}), 30000);
+            }).catch(() => {});
+        },
+
+        stopAutoSync() {
+            if (this._timer) clearInterval(this._timer);
+            this._timer = null;
+        }
+    };
+    </script>
+
+    <!-- ============================================================= -->
     <!-- APP : routeur SPA + init                                      -->
     <!-- ============================================================= -->
     <script>
@@ -2416,6 +2952,8 @@
                 DataSync.setupBeforeUnload();
                 DataSync.startPolling();
                 if (!DataSync._loadedSnapshot) await DataSync._captureSnapshot();
+                // Demarrage de la synchronisation Trackdechets (no-op si desactivee)
+                try { TrackdechetsSync.startAutoSync(); } catch (_) {}
             })
             .catch(err => {
                 console.error('DB error:', err);
@@ -2431,7 +2969,7 @@
     <!-- PWA : Service Worker                                          -->
     <!-- ============================================================= -->
     <script>
-    window.APP_BUILD = '2026-05-19';
+    window.APP_BUILD = '2026-05-19-td';
     console.log('Suivi Dechets Build:', window.APP_BUILD);
 
     if ('serviceWorker' in navigator) {
