@@ -104,6 +104,31 @@
             vertical-align: middle;
         }
 
+        .badge-traitement {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-left: 4px;
+            letter-spacing: 0.3px;
+            vertical-align: middle;
+            font-family: 'Courier New', monospace;
+        }
+        .badge-traitement.badge-trait-r { background: #198754; color: #fff; }
+        .badge-traitement.badge-trait-d { background: #6c757d; color: #fff; }
+
+        .destination-line {
+            font-size: 0.78rem;
+            color: #6c757d;
+            margin-top: 2px;
+            line-height: 1.2;
+        }
+        .destination-line::before {
+            content: '↳ ';
+            color: #adb5bd;
+        }
+
         .table thead th {
             background: var(--agw-green);
             color: #fff;
@@ -1509,17 +1534,26 @@
                 if (filtered.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucun enlevement.</td></tr>';
                 } else {
-                    tbody.innerHTML = filtered.map(e => `
+                    tbody.innerHTML = filtered.map(e => {
+                        const mt = (e.modeTraitement || '').trim().toUpperCase();
+                        const traitClass = mt.startsWith('R') ? 'badge-trait-r' : (mt.startsWith('D') ? 'badge-trait-d' : '');
+                        const traitBadge = mt ? `<span class="badge-traitement ${traitClass}" title="Mode de traitement ${mt.startsWith('R') ? '(valorisation)' : (mt.startsWith('D') ? '(élimination)' : '')}">${Helpers.esc(mt)}</span>` : '';
+                        const destLine = e.destinationNom ? `<div class="destination-line" title="Installation de destination">${Helpers.esc(e.destinationNom)}</div>` : '';
+                        return `
                         <tr>
                             <td>${Helpers.formatDateFR(e.date)}</td>
                             <td>${Helpers.esc(e.siteNom || '')}</td>
                             <td>
                                 <span class="badge-low">${Helpers.esc(e.codeLow || '')}</span>
                                 ${e.dangereux ? '<span class="badge-danger-dechet ms-1">DANGEREUX</span>' : ''}
+                                ${traitBadge}
                                 <div class="small text-muted">${Helpers.esc(e.typeDechetDesignation || '')}</div>
                             </td>
                             <td class="text-end fw-bold">${Helpers.esc(e.quantite)} ${Helpers.esc(e.unite || 'kg')}</td>
-                            <td>${Helpers.esc(e.prestataireNom || '')}</td>
+                            <td>
+                                ${Helpers.esc(e.prestataireNom || '')}
+                                ${destLine}
+                            </td>
                             <td>
                                 ${Helpers.esc(e.numeroBsd || '-')}
                                 ${e.source === 'trackdechets' ? '<span class="badge-trackdechets" title="Importe depuis Trackdechets">TD</span>' : ''}
@@ -1529,7 +1563,8 @@
                                 <a class="btn btn-sm btn-outline-secondary" href="#enlevement-edit/${e.id}" title="Modifier">&#x270F;&#xFE0F;</a>
                                 <button class="btn btn-sm btn-outline-danger" data-del="${e.id}" title="Supprimer">&#x1F5D1;&#xFE0F;</button>
                             </td>
-                        </tr>`).join('');
+                        </tr>`;
+                    }).join('');
                 }
                 document.getElementById('enl-count').textContent = filtered.length;
             };
