@@ -2407,14 +2407,19 @@
 
         async import(file) {
             if (!file) return;
-            if (!confirm('Importer un fichier Excel ajoute des enlevements. Continuer ?')) return;
+            if (!confirm('Importer un fichier Excel ajoute des enlevements (les doublons par N° BSD seront ignores). Continuer ?')) return;
             try {
                 const buf = await file.arrayBuffer();
                 const wb = XLSX.read(buf);
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws);
-                let nb = 0;
+                // Dedup : index des BSD deja presents en base
+                const existing = await DB.listEnlevements();
+                const existingBsd = new Set(existing.map(e => (e.numeroBsd||'').trim().toLowerCase()).filter(Boolean));
+                let nb = 0, skipped = 0;
                 for (const r of rows) {
+                    const bsd = String(r['N° BSD'] || '').trim();
+                    if (bsd && existingBsd.has(bsd.toLowerCase())) { skipped++; continue; }
                     const data = {
                         date: r['Date enlevement'] ? this._parseDate(r['Date enlevement']) : Helpers.todayISO(),
                         codeLow: r['Code dechet (LoW)'] || '',
@@ -2425,7 +2430,7 @@
                         siteNom: r['Site producteur'] || '',
                         contenant: r['Conditionnement'] || '',
                         modeTraitement: r['Mode traitement (R/D)'] || '',
-                        numeroBsd: r['N° BSD'] || '',
+                        numeroBsd: bsd,
                         transporteurNom: r['Transporteur'] || '',
                         destinationNom: r['Installation destination'] || '',
                         destinationSiret: r['SIRET destination'] || '',
@@ -2435,10 +2440,14 @@
                         saisiPar: r['Saisi par'] || ''
                     };
                     await DB.saveEnlevement(data);
+                    if (bsd) existingBsd.add(bsd.toLowerCase());
                     nb++;
                 }
                 DataSync.markDirty();
-                showToast(`${nb} enlevement(s) importe(s)`);
+                const msg = skipped > 0
+                    ? `${nb} importe(s), ${skipped} doublon(s) ignore(s)`
+                    : `${nb} enlevement(s) importe(s)`;
+                showToast(msg);
                 App.route();
             } catch (e) {
                 console.error(e);
