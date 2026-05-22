@@ -1337,7 +1337,7 @@
                         <div class="col-md-3 col-6">
                             <div class="kpi-card" style="border-left-color:#0d6efd">
                                 <div class="kpi-value" style="color:#0d6efd">${nbBsd}</div>
-                                <div class="kpi-label">BSD emis ${anneeCourante}</div>
+                                <div class="kpi-label">BSD / Bons d'enlèvement ${anneeCourante}</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-6">
@@ -1504,7 +1504,7 @@
                                             <th>Prestataire</th>
                                             <th>Installation de destination</th>
                                             <th class="text-center">Traitement</th>
-                                            <th>BSD</th>
+                                            <th>BSD / Bon enlèv.</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -1715,9 +1715,9 @@
                                     </div>
 
                                     <div class="mb-3" id="bsd-wrap">
-                                        <label class="form-label">N° BSD <span class="required-mark" id="bsd-star" style="display:none">*</span></label>
-                                        <input type="text" name="numeroBsd" class="form-control" value="${Helpers.esc(enl.numeroBsd)}" placeholder="Bordereau de suivi des dechets">
-                                        <small class="text-muted" id="bsd-hint">Obligatoire pour les dechets dangereux</small>
+                                        <label class="form-label">N° BSD / Bon d'enlèvement <span class="required-mark" id="bsd-star" style="display:none">*</span></label>
+                                        <input type="text" name="numeroBsd" class="form-control" value="${Helpers.esc(enl.numeroBsd)}" placeholder="BSD (déchet dangereux) ou n° de bon d'enlèvement (déchet banal)">
+                                        <small class="text-muted" id="bsd-hint">BSD obligatoire pour les déchets dangereux ; bon d'enlèvement pour les déchets banals non dangereux</small>
                                     </div>
 
                                     <div class="mb-3">
@@ -2383,7 +2383,7 @@
                 'Adresse site':          siteMap[e.siteId]?.adresse || '',
                 'Conditionnement':       e.contenant || '',
                 'Mode traitement (R/D)': e.modeTraitement || '',
-                'N° BSD':                e.numeroBsd || '',
+                "N° BSD / Bon d'enlèvement": e.numeroBsd || '',
                 'Transporteur':          e.transporteurNom || '',
                 'Installation destination': e.destinationNom || '',
                 'SIRET destination':     e.destinationSiret || '',
@@ -2410,7 +2410,7 @@
 
         async import(file) {
             if (!file) return;
-            if (!confirm('Importer un fichier Excel ajoute des enlevements (les doublons par N° BSD seront ignores). Continuer ?')) return;
+            if (!confirm("Importer un fichier Excel ajoute des enlevements (les doublons par N° BSD / Bon d'enlèvement seront ignores). Continuer ?")) return;
             try {
                 const buf = await file.arrayBuffer();
                 const wb = XLSX.read(buf);
@@ -2458,7 +2458,7 @@
                 siteNom: r['Site producteur'] || '',
                 contenant: r['Conditionnement'] || '',
                 modeTraitement: r['Mode traitement (R/D)'] || '',
-                numeroBsd: String(r['N° BSD'] || '').trim(),
+                numeroBsd: String(r["N° BSD / Bon d'enlèvement"] || r['N° BSD'] || '').trim(),
                 transporteurNom: r['Transporteur'] || '',
                 destinationNom: r['Installation destination'] || '',
                 destinationSiret: r['SIRET destination'] || '',
@@ -2580,7 +2580,7 @@
                 ['Quantite', `${e.quantite} ${e.unite || 'kg'}`],
                 ['Conditionnement', e.contenant || ''],
                 ['Prestataire', e.prestataireNom || ''],
-                ['N° BSD', e.numeroBsd || ''],
+                ["N° BSD / Bon d'enlèvement", e.numeroBsd || ''],
                 ['Mode de traitement', e.modeTraitement || ''],
                 ['Installation destination', e.destinationNom || ''],
                 ['SIRET destination', e.destinationSiret || ''],
