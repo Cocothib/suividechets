@@ -1442,6 +1442,7 @@
             const sites        = await DB.listSites();
             const types        = await DB.listTypesDechets();
             const prestataires = await DB.listPrestataires();
+            const destinations = [...new Set(enlevements.map(e => (e.destinationNom||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
 
             container.innerHTML = `
                 <div class="container">
@@ -1484,9 +1485,33 @@
                                     ${prestataires.map(p => `<option value="${p.id}">${Helpers.esc(p.nom)}</option>`).join('')}
                                 </select>
                             </div>
-                            <div class="col-md-1 col-6 form-check ms-2">
-                                <input type="checkbox" id="f-dang" class="form-check-input">
-                                <label for="f-dang" class="form-check-label small">Dangereux uniquement</label>
+                            <div class="col-md-3 col-6">
+                                <label class="form-label small">Installation destination</label>
+                                <select id="f-dest" class="form-select form-select-sm">
+                                    <option value="">Toutes</option>
+                                    ${destinations.map(d => `<option value="${Helpers.esc(d)}">${Helpers.esc(d)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label small">Traitement</label>
+                                <select id="f-trait" class="form-select form-select-sm">
+                                    <option value="">Tous</option>
+                                    <option value="R">R - Valorisation</option>
+                                    <option value="D">D - Élimination</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label small">&nbsp;</label>
+                                <div class="d-flex gap-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" id="f-dang" class="form-check-input">
+                                        <label for="f-dang" class="form-check-label small">Dangereux</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label small">&nbsp;</label>
+                                <button type="button" id="f-reset" class="btn btn-outline-secondary btn-sm w-100">&#x267B;&#xFE0F; Réinitialiser</button>
                             </div>
                         </div>
                     </div>
@@ -1516,12 +1541,15 @@
                     </div>
                 </div>`;
 
+            let lastFiltered = enlevements.slice();
             const refresh = () => {
                 const debut = document.getElementById('f-debut').value;
                 const fin   = document.getElementById('f-fin').value;
                 const site  = document.getElementById('f-site').value;
                 const type  = document.getElementById('f-type').value;
                 const prest = document.getElementById('f-prest').value;
+                const dest  = document.getElementById('f-dest').value;
+                const trait = document.getElementById('f-trait').value;
                 const dang  = document.getElementById('f-dang').checked;
 
                 let filtered = enlevements.slice();
@@ -1530,7 +1558,10 @@
                 if (site)  filtered = filtered.filter(e => String(e.siteId) === site);
                 if (type)  filtered = filtered.filter(e => String(e.typeDechetId) === type);
                 if (prest) filtered = filtered.filter(e => String(e.prestataireId) === prest);
+                if (dest)  filtered = filtered.filter(e => (e.destinationNom||'').trim() === dest);
+                if (trait) filtered = filtered.filter(e => (e.modeTraitement||'').trim().toUpperCase().startsWith(trait));
                 if (dang)  filtered = filtered.filter(e => e.dangereux === true);
+                lastFiltered = filtered;
 
                 const tbody = document.getElementById('enl-tbody');
                 if (filtered.length === 0) {
@@ -1572,8 +1603,15 @@
                 document.getElementById('enl-count').textContent = filtered.length;
             };
 
-            ['f-debut','f-fin','f-site','f-type','f-prest','f-dang'].forEach(id => {
+            ['f-debut','f-fin','f-site','f-type','f-prest','f-dest','f-trait','f-dang'].forEach(id => {
                 document.getElementById(id).addEventListener('change', refresh);
+            });
+
+            document.getElementById('f-reset').addEventListener('click', () => {
+                ['f-debut','f-fin'].forEach(id => document.getElementById(id).value = '');
+                ['f-site','f-type','f-prest','f-dest','f-trait'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('f-dang').checked = false;
+                refresh();
             });
 
             container.addEventListener('click', async (e) => {
@@ -1595,7 +1633,7 @@
             });
 
             document.getElementById('btn-export-registre').addEventListener('click', () => {
-                ExcelExport.registre();
+                ExcelExport.registre(lastFiltered);
             });
 
             refresh();
@@ -2366,8 +2404,8 @@
     <!-- ============================================================= -->
     <script>
     const ExcelExport = {
-        async registre() {
-            const enlevements = await DB.listEnlevements();
+        async registre(enlevementsOverride) {
+            const enlevements = enlevementsOverride || await DB.listEnlevements();
             const sites = await DB.listSites();
             const siteMap = Object.fromEntries(sites.map(s => [s.id, s]));
 
