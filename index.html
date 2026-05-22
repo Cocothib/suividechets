@@ -1502,6 +1502,8 @@
                                             <th>Type</th>
                                             <th class="text-end">Quantite</th>
                                             <th>Prestataire</th>
+                                            <th>Installation de destination</th>
+                                            <th class="text-center">Traitement</th>
                                             <th>BSD</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
@@ -1532,13 +1534,16 @@
 
                 const tbody = document.getElementById('enl-tbody');
                 if (filtered.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucun enlevement.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Aucun enlevement.</td></tr>';
                 } else {
                     tbody.innerHTML = filtered.map(e => {
                         const mt = (e.modeTraitement || '').trim().toUpperCase();
                         const traitClass = mt.startsWith('R') ? 'badge-trait-r' : (mt.startsWith('D') ? 'badge-trait-d' : '');
-                        const traitBadge = mt ? `<span class="badge-traitement ${traitClass}" title="Mode de traitement ${mt.startsWith('R') ? '(valorisation)' : (mt.startsWith('D') ? '(élimination)' : '')}">${Helpers.esc(mt)}</span>` : '';
-                        const destLine = e.destinationNom ? `<div class="destination-line" title="Installation de destination">${Helpers.esc(e.destinationNom)}</div>` : '';
+                        const traitLabel = mt.startsWith('R') ? 'valorisation' : (mt.startsWith('D') ? 'élimination' : '');
+                        const traitBadge = mt ? `<span class="badge-traitement ${traitClass}" title="${traitLabel}">${Helpers.esc(mt)}</span>` : '<span class="text-muted small">—</span>';
+                        const destCell = e.destinationNom
+                            ? Helpers.esc(e.destinationNom) + (e.destinationSiret ? `<div class="small text-muted">SIRET ${Helpers.esc(e.destinationSiret)}</div>` : '')
+                            : '<span class="text-muted small">—</span>';
                         return `
                         <tr>
                             <td>${Helpers.formatDateFR(e.date)}</td>
@@ -1546,14 +1551,12 @@
                             <td>
                                 <span class="badge-low">${Helpers.esc(e.codeLow || '')}</span>
                                 ${e.dangereux ? '<span class="badge-danger-dechet ms-1">DANGEREUX</span>' : ''}
-                                ${traitBadge}
                                 <div class="small text-muted">${Helpers.esc(e.typeDechetDesignation || '')}</div>
                             </td>
                             <td class="text-end fw-bold">${Helpers.esc(e.quantite)} ${Helpers.esc(e.unite || 'kg')}</td>
-                            <td>
-                                ${Helpers.esc(e.prestataireNom || '')}
-                                ${destLine}
-                            </td>
+                            <td>${Helpers.esc(e.prestataireNom || '')}</td>
+                            <td>${destCell}</td>
+                            <td class="text-center">${traitBadge}</td>
                             <td>
                                 ${Helpers.esc(e.numeroBsd || '-')}
                                 ${e.source === 'trackdechets' ? '<span class="badge-trackdechets" title="Importe depuis Trackdechets">TD</span>' : ''}
