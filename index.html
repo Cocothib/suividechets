@@ -2416,46 +2416,110 @@
                 const wb = XLSX.read(buf);
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws);
+                if (!rows.length) { showToast('Fichier vide', 'warning'); return; }
+                const headers = Object.keys(rows[0]);
+                const isPrestataireENRTEC = headers.some(h => /référence|reference/i.test(h))
+                    && headers.some(h => /tonnage/i.test(h))
+                    && headers.some(h => /date de retrait/i.test(h));
+                const mapped = isPrestataireENRTEC
+                    ? rows.map(r => this._mapPrestataireENRTEC(r))
+                    : rows.map(r => this._mapFormatApp(r));
                 // Dedup : index des BSD deja presents en base
                 const existing = await DB.listEnlevements();
                 const existingBsd = new Set(existing.map(e => (e.numeroBsd||'').trim().toLowerCase()).filter(Boolean));
                 let nb = 0, skipped = 0;
-                for (const r of rows) {
-                    const bsd = String(r['N° BSD'] || '').trim();
+                for (const data of mapped) {
+                    const bsd = (data.numeroBsd || '').trim();
                     if (bsd && existingBsd.has(bsd.toLowerCase())) { skipped++; continue; }
-                    const data = {
-                        date: r['Date enlevement'] ? this._parseDate(r['Date enlevement']) : Helpers.todayISO(),
-                        codeLow: r['Code dechet (LoW)'] || '',
-                        typeDechetDesignation: r['Designation'] || '',
-                        dangereux: String(r['Dangereux']||'').toUpperCase() === 'OUI',
-                        quantite: Number(r['Quantite']) || 0,
-                        unite: r['Unite'] || 'kg',
-                        siteNom: r['Site producteur'] || '',
-                        contenant: r['Conditionnement'] || '',
-                        modeTraitement: r['Mode traitement (R/D)'] || '',
-                        numeroBsd: bsd,
-                        transporteurNom: r['Transporteur'] || '',
-                        destinationNom: r['Installation destination'] || '',
-                        destinationSiret: r['SIRET destination'] || '',
-                        prestataireNom: r['Prestataire'] || '',
-                        numeroFacture: r['N° facture'] || '',
-                        observations: r['Observations'] || '',
-                        saisiPar: r['Saisi par'] || ''
-                    };
                     await DB.saveEnlevement(data);
                     if (bsd) existingBsd.add(bsd.toLowerCase());
                     nb++;
                 }
                 DataSync.markDirty();
+                const formatLabel = isPrestataireENRTEC ? ' (format prestataire)' : '';
                 const msg = skipped > 0
-                    ? `${nb} importe(s), ${skipped} doublon(s) ignore(s)`
-                    : `${nb} enlevement(s) importe(s)`;
+                    ? `${nb} importe(s)${formatLabel}, ${skipped} doublon(s) ignore(s)`
+                    : `${nb} enlevement(s) importe(s)${formatLabel}`;
                 showToast(msg);
                 App.route();
             } catch (e) {
                 console.error(e);
                 showToast('Erreur import Excel', 'danger');
             }
+        },
+        _mapFormatApp(r) {
+            return {
+                date: r['Date enlevement'] ? this._parseDate(r['Date enlevement']) : Helpers.todayISO(),
+                codeLow: r['Code dechet (LoW)'] || '',
+                typeDechetDesignation: r['Designation'] || '',
+                dangereux: String(r['Dangereux']||'').toUpperCase() === 'OUI',
+                quantite: Number(r['Quantite']) || 0,
+                unite: r['Unite'] || 'kg',
+                siteNom: r['Site producteur'] || '',
+                contenant: r['Conditionnement'] || '',
+                modeTraitement: r['Mode traitement (R/D)'] || '',
+                numeroBsd: String(r['N° BSD'] || '').trim(),
+                transporteurNom: r['Transporteur'] || '',
+                destinationNom: r['Installation destination'] || '',
+                destinationSiret: r['SIRET destination'] || '',
+                prestataireNom: r['Prestataire'] || '',
+                numeroFacture: r['N° facture'] || '',
+                observations: r['Observations'] || '',
+                saisiPar: r['Saisi par'] || ''
+            };
+        },
+        _mapPrestataireENRTEC(r) {
+            // Recupere les valeurs en tolerant les variantes d'accents/casse sur les en-tetes
+            const get = (...names) => {
+                for (const n of names) {
+                    for (const k of Object.keys(r)) {
+                        if (k.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim()
+                            === n.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim()) {
+                            return r[k];
+                        }
+                    }
+                }
+                return '';
+            };
+            const ref           = String(get('Reference','Référence') || '').trim();
+            const codeChantier  = String(get('Code chantier') || '').trim();
+            const adresseSite   = String(get('Adresse') || '').trim();
+            const typologie     = String(get('Typologie de dechet','Typologie de déchet') || '').trim();
+            const prestataire   = String(get('Prestataire') || '').trim();
+            const siretRaw      = String(get("Numero d'identification Prestataire","Numéro d'identification Prestataire") || '');
+            const siret         = (siretRaw.match(/\d{9,14}/) || [''])[0];
+            const adresseExut   = String(get("Adresse de l'exutoire") || '').trim();
+            const typeTrait     = String(get('Type de traitement') || '').trim();
+            const codeTrait     = String(get('Code de traitement') || '').trim();
+            const modeRD        = (codeTrait.match(/^([RD])/i) || [,''])[1].toUpperCase();
+            const tonnage       = Number(get('Tonnage')) || 0;
+            // Site producteur = code chantier si dispo, sinon commune extraite de l'adresse
+            const communeMatch  = adresseSite.match(/\d{5}\s+([^,]+)/);
+            const siteNom       = codeChantier || (communeMatch ? communeMatch[1].trim() : 'Site ENRTEC');
+            const obsParts = [];
+            if (codeChantier && communeMatch) obsParts.push(`Chantier ${codeChantier} - ${communeMatch[1].trim()}`);
+            if (adresseSite)  obsParts.push(`Adresse site: ${adresseSite}`);
+            if (adresseExut)  obsParts.push(`Exutoire: ${adresseExut}`);
+            if (typeTrait)    obsParts.push(`Traitement: ${typeTrait}${codeTrait?` (${codeTrait})`:''}`);
+            return {
+                date: this._parseDate(get('Date de retrait')),
+                codeLow: '',
+                typeDechetDesignation: typologie,
+                dangereux: /dangereux|dasri|amiante/i.test(typologie),
+                quantite: tonnage,
+                unite: 't',
+                siteNom,
+                contenant: '',
+                modeTraitement: modeRD,
+                numeroBsd: ref,
+                transporteurNom: '',
+                destinationNom: prestataire,
+                destinationSiret: siret,
+                prestataireNom: prestataire,
+                numeroFacture: '',
+                observations: obsParts.join(' | '),
+                saisiPar: 'Import prestataire'
+            };
         },
         _parseDate(s) {
             if (!s) return Helpers.todayISO();
