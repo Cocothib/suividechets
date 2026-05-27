@@ -247,6 +247,124 @@
 
         /* Print PDF helpers */
         @media print { .no-print { display: none !important; } }
+
+        /* ====== Module Bon de Livraison (BL) ====== */
+        .bl-viewer-panel {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 480px;
+        }
+        .bl-toolbar {
+            background: var(--agw-green);
+            color: #fff;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .bl-toolbar .bl-filename {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70%;
+            font-weight: 600;
+        }
+        .bl-toolbar .bl-toolbar-actions { display: flex; gap: 4px; }
+        .bl-toolbar .bl-toolbar-btn {
+            background: rgba(255,255,255,0.15);
+            border: none; color: #fff;
+            padding: 4px 10px; border-radius: 4px; font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .bl-toolbar .bl-toolbar-btn:hover { background: rgba(255,255,255,0.3); }
+        .bl-viewer {
+            flex: 1;
+            background: #2b2b2b;
+            min-height: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: auto;
+        }
+        .bl-viewer img.bl-img { max-width: 100%; max-height: 70vh; display: block; }
+        .bl-viewer iframe.bl-pdf {
+            width: 100%; height: 70vh; min-height: 480px;
+            border: 0; background: #fff;
+        }
+        .bl-upload-zone {
+            border: 2px dashed #c7d2e0;
+            border-radius: 10px;
+            padding: 32px 18px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafbfc;
+            color: #6b7280;
+            transition: 0.15s;
+            width: 90%;
+            max-width: 420px;
+        }
+        .bl-upload-zone:hover,
+        .bl-upload-zone.bl-drag-over {
+            background: #eef7f0;
+            border-color: var(--agw-green);
+            color: var(--agw-green);
+        }
+        .bl-upload-zone .bl-upload-icon { font-size: 2.4rem; color: var(--agw-green); }
+        .bl-mock-empty { text-align: center; padding: 18px; }
+        .bl-footer {
+            background: #fff;
+            border-top: 1px solid #e5e7eb;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .bl-footer .bl-storage-ok { color: var(--agw-green); font-weight: 600; }
+        .bl-footer .bl-storage-pending { color: #b58105; font-weight: 600; }
+        .bl-form-panel {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            padding: 16px;
+        }
+        .bl-form-panel .form-section {
+            border-left: 3px solid var(--agw-green);
+            padding-left: 12px;
+            margin-bottom: 16px;
+        }
+        .bl-form-panel .form-section h6 {
+            color: var(--agw-green);
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .badge-prestataire-detected {
+            background: #e8f4ea;
+            color: var(--agw-green-dark);
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        .btn-duplicate-last {
+            font-size: 0.78rem;
+        }
+        @media (max-width: 991.98px) {
+            .bl-viewer-panel { min-height: 320px; }
+            .bl-viewer { min-height: 280px; }
+            .bl-viewer iframe.bl-pdf { height: 50vh; min-height: 320px; }
+        }
     </style>
 </head>
 <body>
@@ -401,6 +519,18 @@
         return tx.table('enlevements').toCollection().modify(e => {
             if (!e.source) e.source = 'manuel';
         });
+    });
+
+    // v3 : ajout du Bon de Livraison (BL) prestataire en piece jointe sur les enlevements
+    // Le champ bl est un objet { name, mimeType, base64, sharepointUrl, uploadedAt, pendingUpload }
+    // Pas de nouvel index : le BL est consulte via l'enlevement parent.
+    db.version(3).stores({
+        enlevements:   '++id, date, siteId, typeDechetId, prestataireId, numeroBsd, source, trackdechetsId',
+        types_dechets: '++id, codeLow, designation, dangereux',
+        prestataires:  '++id, nom, siret',
+        sites:         '++id, nom, type',
+        utilisateurs:  'id, nom, agence',
+        config:        'id'
     });
 
     /* ---------- Seed donnees ---------- */
@@ -686,6 +816,46 @@
         await _graphFetch(url, { method: 'DELETE' });
     }
 
+    /* Upload binaire (PDF, image, etc.) vers SharePoint - retourne le driveItem (webUrl) */
+    async function _uploadBinaryFile(filePath, blob, contentType) {
+        const driveId = await _getDriveId();
+        const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${filePath}:/content`;
+        const token = await _getToken();
+        if (!token) throw new Error('Non authentifie');
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': contentType || 'application/octet-stream'
+        };
+        const resp = await fetch(url, { method: 'PUT', headers, body: blob });
+        if (!resp.ok) throw new Error('Erreur upload BL: ' + resp.status);
+        return resp.json();
+    }
+
+    /* Sanitise un segment de chemin (nom prestataire, etc.) : sans accents, alphanum + _ */
+    function _sanitizeFilenamePart(s) {
+        if (!s) return 'inconnu';
+        return String(s)
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-zA-Z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .substring(0, 80) || 'inconnu';
+    }
+
+    /* Convertit base64 (sans prefixe data:) en Blob */
+    function _base64ToBlob(b64, contentType) {
+        const byteChars = atob(b64);
+        const byteNums = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+        return new Blob([new Uint8Array(byteNums)], { type: contentType || 'application/octet-stream' });
+    }
+
+    /* Extrait la partie base64 pure d'une dataURL ou base64 brut */
+    function _stripDataUrl(s) {
+        if (!s) return '';
+        const idx = s.indexOf('base64,');
+        return idx >= 0 ? s.substring(idx + 7) : s;
+    }
+
     async function _listFiles(folderPath) {
         const driveId = await _getDriveId();
         const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${folderPath}:/children`;
@@ -887,6 +1057,39 @@
             const filePath = `${APP_CONFIG.DATA_FOLDER_PATH}/${APP_CONFIG.DATA_FILE_NAME}`;
             const MAX_RETRIES = 3;
             let attempt = 0;
+
+            // Re-tenter l'upload des BL en attente avant la sauvegarde du data.json
+            try {
+                const pendings = await db.enlevements.toArray();
+                for (const e of pendings) {
+                    if (!e.bl || !e.bl.pendingUpload || !e.bl.base64) continue;
+                    try {
+                        const annee = (e.date || '').slice(0, 4) || String(new Date().getFullYear());
+                        const prestaSafe = _sanitizeFilenamePart(e.prestataireNom || 'inconnu');
+                        const ts = e.createdAt ? Date.parse(e.createdAt) : Date.now();
+                        const ext = (e.bl.name && e.bl.name.match(/\.[a-z0-9]+$/i)) ? e.bl.name.match(/\.[a-z0-9]+$/i)[0] : '';
+                        const baseSafe = _sanitizeFilenamePart((e.bl.name || 'bl').replace(/\.[^.]+$/, ''));
+                        const safeName = ts + '_' + baseSafe + ext;
+                        const filePathBL = `${APP_CONFIG.DATA_FOLDER_PATH}/BL/${annee}/${prestaSafe}/${safeName}`;
+                        const base64Data = _stripDataUrl(e.bl.base64);
+                        const blob = _base64ToBlob(base64Data, e.bl.mimeType);
+                        const driveItem = await _uploadBinaryFile(filePathBL, blob, e.bl.mimeType);
+                        e.bl = {
+                            name: e.bl.name,
+                            mimeType: e.bl.mimeType,
+                            base64: '',
+                            sharepointUrl: driveItem.webUrl || '',
+                            sharepointPath: filePathBL,
+                            uploadedAt: new Date().toISOString(),
+                            pendingUpload: false
+                        };
+                        await db.enlevements.put(e);
+                    } catch (err) {
+                        console.warn('Sync BL en attente - echec pour enl ' + e.id, err);
+                    }
+                }
+            } catch (e) { console.warn('Sync BL pending - erreur', e); }
+
             try {
                 while (true) {
                     attempt++;
@@ -1650,6 +1853,15 @@
             const types        = await DB.listTypesDechets();
             const sites        = await DB.listSites();
             const prestataires = await DB.listPrestataires();
+            const allEnlForLists = await DB.listEnlevements();
+            const _setTranspo = new Set();
+            const _setDest = new Set();
+            for (const _e of allEnlForLists) {
+                if (_e.transporteurNom && String(_e.transporteurNom).trim()) _setTranspo.add(String(_e.transporteurNom).trim());
+                if (_e.destinationNom && String(_e.destinationNom).trim()) _setDest.add(String(_e.destinationNom).trim());
+            }
+            const _transpoOpts = Array.from(_setTranspo).sort().map(v => `<option value="${Helpers.esc(v)}">`).join('');
+            const _destOpts    = Array.from(_setDest).sort().map(v => `<option value="${Helpers.esc(v)}">`).join('');
 
             const isEdit = !!id;
             const enl = isEdit ? await DB.getEnlevement(id) : {
@@ -1684,106 +1896,141 @@
                         </div>` : ''}
 
                     <form id="enl-form" autocomplete="off">
-                        <div class="row g-4">
+                        <div class="row g-3">
+                            <!-- COL GAUCHE : Viewer BL -->
                             <div class="col-lg-6">
-                                <div class="card p-3">
-                                    <div class="form-section-title">Informations generales</div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Date <span class="required-mark">*</span></label>
-                                        <input type="date" name="date" class="form-control" required value="${Helpers.esc(enl.date)}">
+                                <div class="bl-viewer-panel" id="bl-panel">
+                                    <div class="bl-toolbar">
+                                        <span class="bl-filename" id="bl-filename">
+                                            <span style="margin-right:6px">&#x1F4CE;</span>
+                                            <span id="bl-filename-text">Aucun BL attache</span>
+                                        </span>
+                                        <div class="bl-toolbar-actions" id="bl-toolbar-actions"></div>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Site producteur <span class="required-mark">*</span></label>
-                                        <select name="siteId" class="form-select" required>
-                                            <option value="">-- Choisir --</option>
-                                            ${sites.map(s => `<option value="${s.id}" ${String(enl.siteId) === String(s.id) ? 'selected' : ''}>${Helpers.esc(s.nom)} (${Helpers.esc(s.type)})</option>`).join('')}
-                                        </select>
+                                    <div class="bl-viewer" id="bl-viewer">
+                                        <!-- Contenu dynamique : upload zone ou viewer -->
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Type de dechet <span class="required-mark">*</span></label>
-                                        <select name="typeDechetId" class="form-select" required>
-                                            <option value="">-- Choisir --</option>
-                                            ${types.map(t => `<option value="${t.id}" data-dang="${t.dangereux ? 1 : 0}" data-low="${Helpers.esc(t.codeLow)}" data-des="${Helpers.esc(t.designation)}" ${String(enl.typeDechetId) === String(t.id) ? 'selected' : ''}>${Helpers.esc(t.codeLow)} - ${Helpers.esc(t.designation)}${t.dangereux ? ' [DANGEREUX]' : ''}</option>`).join('')}
-                                        </select>
-                                    </div>
-
-                                    <div class="row g-2">
-                                        <div class="col-7">
-                                            <label class="form-label">Quantite <span class="required-mark">*</span></label>
-                                            <input type="number" step="0.001" min="0" name="quantite" class="form-control" required value="${Helpers.esc(enl.quantite)}">
-                                        </div>
-                                        <div class="col-5">
-                                            <label class="form-label">Unite</label>
-                                            <select name="unite" class="form-select">
-                                                ${UNITES.map(u => `<option value="${u}" ${enl.unite === u ? 'selected' : ''}>${u}</option>`).join('')}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3 mt-3">
-                                        <label class="form-label">Conditionnement</label>
-                                        <select name="contenant" class="form-select">
-                                            ${CONTENANTS.map(c => `<option value="${c}" ${enl.contenant === c ? 'selected' : ''}>${c}</option>`).join('')}
-                                        </select>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Photo (1 max)</label>
-                                        <input type="file" id="photo-input" class="form-control" accept="image/*" capture="environment">
-                                        <div id="photo-preview-zone">
-                                            ${enl.photo ? `<img src="${enl.photo}" class="photo-preview"><button type="button" class="btn btn-sm btn-outline-danger mt-1" id="btn-photo-remove">Retirer la photo</button>` : ''}
-                                        </div>
+                                    <div class="bl-footer">
+                                        <span id="bl-storage-status">&#x1F4C2; Aucun document</span>
+                                        <span class="text-muted">PDF, JPG, PNG</span>
                                     </div>
                                 </div>
+                                <input type="file" id="bl-input" accept="application/pdf,image/*" style="display:none">
                             </div>
 
+                            <!-- COL DROITE : Formulaire compact -->
                             <div class="col-lg-6">
-                                <div class="card p-3" id="trace-card">
-                                    <div class="form-section-title">Tracabilite</div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Prestataire</label>
-                                        <select name="prestataireId" class="form-select">
-                                            <option value="">-- Choisir --</option>
-                                            ${prestataires.map(p => `<option value="${p.id}" ${String(enl.prestataireId) === String(p.id) ? 'selected' : ''}>${Helpers.esc(p.nom)}</option>`).join('')}
-                                        </select>
+                                <div class="bl-form-panel" id="trace-card">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                        <div>
+                                            <strong>Saisie des donnees</strong>
+                                            <span id="bl-prest-badge" class="badge-prestataire-detected" style="display:none; margin-left:8px;"></span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary btn-duplicate-last" id="btn-duplicate-last" style="display:none">
+                                            &#x1F4CB; Dupliquer derniere saisie
+                                        </button>
                                     </div>
 
-                                    <div class="mb-3" id="bsd-wrap">
-                                        <label class="form-label">N° BSD / Bon d'enlèvement <span class="required-mark" id="bsd-star" style="display:none">*</span></label>
-                                        <input type="text" name="numeroBsd" class="form-control" value="${Helpers.esc(enl.numeroBsd)}" placeholder="BSD (déchet dangereux) ou n° de bon d'enlèvement (déchet banal)">
-                                        <small class="text-muted" id="bsd-hint">BSD obligatoire pour les déchets dangereux ; bon d'enlèvement pour les déchets banals non dangereux</small>
+                                    <!-- Section Identification -->
+                                    <div class="form-section">
+                                        <h6>Identification</h6>
+                                        <div class="row g-2">
+                                            <div class="col-md-5">
+                                                <label class="form-label small">Date <span class="required-mark">*</span></label>
+                                                <input type="date" name="date" class="form-control form-control-sm" required value="${Helpers.esc(enl.date)}">
+                                            </div>
+                                            <div class="col-md-7">
+                                                <label class="form-label small">Site producteur <span class="required-mark">*</span></label>
+                                                <select name="siteId" class="form-select form-select-sm" required>
+                                                    <option value="">-- Choisir --</option>
+                                                    ${sites.map(s => `<option value="${s.id}" ${String(enl.siteId) === String(s.id) ? 'selected' : ''}>${Helpers.esc(s.nom)} (${Helpers.esc(s.type)})</option>`).join('')}
+                                                </select>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small">Type de dechet <span class="required-mark">*</span></label>
+                                                <select name="typeDechetId" class="form-select form-select-sm" required>
+                                                    <option value="">-- Choisir --</option>
+                                                    ${types.map(t => `<option value="${t.id}" data-dang="${t.dangereux ? 1 : 0}" data-low="${Helpers.esc(t.codeLow)}" data-des="${Helpers.esc(t.designation)}" ${String(enl.typeDechetId) === String(t.id) ? 'selected' : ''}>${Helpers.esc(t.codeLow)} - ${Helpers.esc(t.designation)}${t.dangereux ? ' [DANGEREUX]' : ''}</option>`).join('')}
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">Mode de traitement (R/D)</label>
-                                        <select name="modeTraitement" class="form-select">
-                                            <option value="">-- Non specifie --</option>
-                                            ${MODES_TRAITEMENT.map(m => `<option value="${m.code}" ${enl.modeTraitement === m.code ? 'selected' : ''}>${Helpers.esc(m.label)}</option>`).join('')}
-                                        </select>
+                                    <!-- Section Quantite -->
+                                    <div class="form-section">
+                                        <h6>Quantite</h6>
+                                        <div class="row g-2">
+                                            <div class="col-md-5">
+                                                <label class="form-label small">Quantite <span class="required-mark">*</span></label>
+                                                <input type="number" step="0.001" min="0" name="quantite" class="form-control form-control-sm" required value="${Helpers.esc(enl.quantite)}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small">Unite</label>
+                                                <select name="unite" class="form-select form-select-sm">
+                                                    ${UNITES.map(u => `<option value="${u}" ${enl.unite === u ? 'selected' : ''}>${u}</option>`).join('')}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small">Conditionnement</label>
+                                                <select name="contenant" class="form-select form-select-sm">
+                                                    ${CONTENANTS.map(c => `<option value="${c}" ${enl.contenant === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                                </select>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small">Photo terrain (1 max)</label>
+                                                <input type="file" id="photo-input" class="form-control form-control-sm" accept="image/*" capture="environment">
+                                                <div id="photo-preview-zone">
+                                                    ${enl.photo ? `<img src="${enl.photo}" class="photo-preview"><button type="button" class="btn btn-sm btn-outline-danger mt-1" id="btn-photo-remove">Retirer la photo</button>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">Installation de destination</label>
-                                        <input type="text" name="destinationNom" class="form-control" value="${Helpers.esc(enl.destinationNom)}" placeholder="Centre de traitement">
-                                    </div>
+                                    <!-- Section Tracabilite -->
+                                    <div class="form-section">
+                                        <h6>Tracabilite reglementaire</h6>
+                                        <div class="row g-2">
+                                            <div class="col-md-7">
+                                                <label class="form-label small">Prestataire</label>
+                                                <select name="prestataireId" class="form-select form-select-sm">
+                                                    <option value="">-- Choisir --</option>
+                                                    ${prestataires.map(p => `<option value="${p.id}" data-nom="${Helpers.esc(p.nom)}" ${String(enl.prestataireId) === String(p.id) ? 'selected' : ''}>${Helpers.esc(p.nom)}</option>`).join('')}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-5" id="bsd-wrap">
+                                                <label class="form-label small">N&deg; BSD / Bon d'enlevement <span class="required-mark" id="bsd-star" style="display:none">*</span></label>
+                                                <input type="text" name="numeroBsd" class="form-control form-control-sm" value="${Helpers.esc(enl.numeroBsd)}" placeholder="BSD ou bon d'enlevement">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="text-muted" id="bsd-hint">BSD obligatoire pour les dechets dangereux ; bon d'enlevement pour les dechets banals non dangereux</small>
+                                            </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">SIRET destination</label>
-                                        <input type="text" name="destinationSiret" class="form-control" value="${Helpers.esc(enl.destinationSiret)}">
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Transporteur</label>
-                                        <input type="text" name="transporteurNom" class="form-control" value="${Helpers.esc(enl.transporteurNom)}">
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">N° facture</label>
-                                        <input type="text" name="numeroFacture" class="form-control" value="${Helpers.esc(enl.numeroFacture)}">
+                                            <div class="col-md-6">
+                                                <label class="form-label small">Mode de traitement (R/D)</label>
+                                                <select name="modeTraitement" class="form-select form-select-sm">
+                                                    <option value="">-- Non specifie --</option>
+                                                    ${MODES_TRAITEMENT.map(m => `<option value="${m.code}" ${enl.modeTraitement === m.code ? 'selected' : ''}>${Helpers.esc(m.label)}</option>`).join('')}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small">Transporteur</label>
+                                                <input list="transporteurs-list" type="text" name="transporteurNom" class="form-control form-control-sm" value="${Helpers.esc(enl.transporteurNom)}">
+                                                <datalist id="transporteurs-list">${_transpoOpts}</datalist>
+                                            </div>
+                                            <div class="col-md-8">
+                                                <label class="form-label small">Installation de destination</label>
+                                                <input list="destinations-list" type="text" name="destinationNom" class="form-control form-control-sm" value="${Helpers.esc(enl.destinationNom)}" placeholder="Centre de traitement">
+                                                <datalist id="destinations-list">${_destOpts}</datalist>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small">SIRET destination</label>
+                                                <input type="text" name="destinationSiret" class="form-control form-control-sm" value="${Helpers.esc(enl.destinationSiret)}">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small">N&deg; facture</label>
+                                                <input type="text" name="numeroFacture" class="form-control form-control-sm" value="${Helpers.esc(enl.numeroFacture)}">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1791,7 +2038,7 @@
 
                         <div class="card p-3 mt-3">
                             <label class="form-label fw-bold">Observations</label>
-                            <textarea name="observations" class="form-control" rows="3">${Helpers.esc(enl.observations)}</textarea>
+                            <textarea name="observations" class="form-control" rows="2">${Helpers.esc(enl.observations)}</textarea>
                         </div>
 
                         <div class="d-flex gap-2 mt-3 mb-5">
@@ -1865,6 +2112,187 @@
                 };
             }
 
+            // =====================================================
+            // Gestion BL (Bon de Livraison) - viewer + upload + drag&drop
+            // =====================================================
+            let currentBL = enl.bl || null;
+            const blViewer       = container.querySelector('#bl-viewer');
+            const blInput        = container.querySelector('#bl-input');
+            const blFilenameText = container.querySelector('#bl-filename-text');
+            const blToolbarActions = container.querySelector('#bl-toolbar-actions');
+            const blStorageStatus  = container.querySelector('#bl-storage-status');
+            const blPrestBadge   = container.querySelector('#bl-prest-badge');
+            const prestSelectEl  = container.querySelector('select[name="prestataireId"]');
+
+            const _normBLName = (s) => String(s || '')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toLowerCase()
+                .replace(/\.[a-z0-9]+$/i, '')
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim();
+
+            const renderBLViewer = () => {
+                if (!currentBL) {
+                    blFilenameText.textContent = 'Aucun BL attache';
+                    blToolbarActions.innerHTML = '';
+                    blStorageStatus.innerHTML = '&#x1F4C2; Aucun document';
+                    blViewer.innerHTML = `
+                        <div class="bl-upload-zone" id="bl-upload-zone">
+                            <div class="bl-upload-icon">&#x1F4C4;</div>
+                            <div style="margin-top:8px; font-weight:600;">Deposer le BL ici</div>
+                            <div style="font-size:0.85rem; margin-top:4px;">ou cliquer pour selectionner (PDF, JPG, PNG)</div>
+                        </div>`;
+                    const zone = blViewer.querySelector('#bl-upload-zone');
+                    if (zone) {
+                        zone.addEventListener('click', () => blInput.click());
+                        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('bl-drag-over'); });
+                        zone.addEventListener('dragleave', () => zone.classList.remove('bl-drag-over'));
+                        zone.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            zone.classList.remove('bl-drag-over');
+                            const f = e.dataTransfer?.files?.[0];
+                            if (f) handleBLFile(f);
+                        });
+                    }
+                    return;
+                }
+                blFilenameText.textContent = currentBL.name || 'BL';
+                blToolbarActions.innerHTML = `<button type="button" class="bl-toolbar-btn" id="bl-remove-btn">&#x274C; Retirer</button>`;
+                const removeBtn = blToolbarActions.querySelector('#bl-remove-btn');
+                if (removeBtn) removeBtn.onclick = () => {
+                    currentBL = null;
+                    blInput.value = '';
+                    if (blPrestBadge) blPrestBadge.style.display = 'none';
+                    renderBLViewer();
+                };
+                if (currentBL.pendingUpload) {
+                    blStorageStatus.innerHTML = '<span class="bl-storage-pending">&#x23F3; En attente d\'upload SharePoint</span>';
+                } else if (currentBL.sharepointUrl) {
+                    blStorageStatus.innerHTML = '<span class="bl-storage-ok">&#x2705; Stocke sur SharePoint</span>';
+                } else {
+                    blStorageStatus.innerHTML = '&#x1F4C2; Pret a televerser';
+                }
+                const mime = currentBL.mimeType || '';
+                const src = currentBL.base64 || currentBL.sharepointUrl || '';
+                if (mime.startsWith('image/')) {
+                    blViewer.innerHTML = `<img src="${Helpers.esc(src)}" class="bl-img" alt="BL">`;
+                } else if (mime === 'application/pdf') {
+                    // Si on a un base64 (data URL), on l'utilise ; sinon sharepointUrl
+                    const pdfSrc = currentBL.base64
+                        ? currentBL.base64 + '#toolbar=0'
+                        : (currentBL.sharepointUrl || '');
+                    blViewer.innerHTML = `<iframe src="${Helpers.esc(pdfSrc)}" class="bl-pdf"></iframe>`;
+                } else {
+                    blViewer.innerHTML = `<div class="bl-mock-empty text-light"><div style="font-size:2rem">&#x1F4C4;</div><div>${Helpers.esc(currentBL.name || 'Fichier')}</div><div class="small text-muted mt-2">Format non previsualisable</div></div>`;
+                }
+            };
+
+            const _tryDetectPrestataire = (filename) => {
+                if (!prestSelectEl) return;
+                const norm = _normBLName(filename);
+                if (!norm) return;
+                let matched = null;
+                for (const p of prestataires) {
+                    const pnorm = _normBLName(p.nom);
+                    if (!pnorm) continue;
+                    if (norm.includes(pnorm) || pnorm.includes(norm.split(' ')[0])) {
+                        matched = p;
+                        break;
+                    }
+                }
+                if (matched) {
+                    prestSelectEl.value = String(matched.id);
+                    prestSelectEl.dispatchEvent(new Event('change'));
+                    if (blPrestBadge) {
+                        blPrestBadge.textContent = `${matched.nom} detecte`;
+                        blPrestBadge.style.display = '';
+                    }
+                } else if (blPrestBadge) {
+                    blPrestBadge.style.display = 'none';
+                }
+            };
+
+            const handleBLFile = (file) => {
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    currentBL = {
+                        name: file.name,
+                        mimeType: file.type || 'application/octet-stream',
+                        base64: reader.result,
+                        sharepointUrl: '',
+                        pendingUpload: false
+                    };
+                    _tryDetectPrestataire(file.name);
+                    renderBLViewer();
+                };
+                reader.onerror = () => showToast('Erreur de lecture du BL', 'danger');
+                reader.readAsDataURL(file);
+            };
+
+            blInput.addEventListener('change', (e) => {
+                const f = e.target.files?.[0];
+                if (f) handleBLFile(f);
+            });
+
+            // Drag&drop global sur la panel (en plus de la zone si pas de BL)
+            const blPanel = container.querySelector('#bl-panel');
+            if (blPanel) {
+                blPanel.addEventListener('dragover', (e) => { e.preventDefault(); });
+                blPanel.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const f = e.dataTransfer?.files?.[0];
+                    if (f) handleBLFile(f);
+                });
+            }
+
+            renderBLViewer();
+
+            // =====================================================
+            // Bouton "Dupliquer derniere saisie de [prestataire]"
+            // =====================================================
+            const btnDuplicateLast = container.querySelector('#btn-duplicate-last');
+
+            const _updateDuplicateBtn = () => {
+                if (!btnDuplicateLast || !prestSelectEl) return;
+                const opt = prestSelectEl.selectedOptions[0];
+                if (!opt || !opt.value) {
+                    btnDuplicateLast.style.display = 'none';
+                    return;
+                }
+                const nom = opt.dataset.nom || opt.textContent || 'prestataire';
+                btnDuplicateLast.innerHTML = `&#x1F4CB; Dupliquer derniere saisie de ${Helpers.esc(nom)}`;
+                btnDuplicateLast.style.display = '';
+            };
+
+            if (prestSelectEl) {
+                prestSelectEl.addEventListener('change', _updateDuplicateBtn);
+                _updateDuplicateBtn();
+            }
+
+            if (btnDuplicateLast) {
+                btnDuplicateLast.addEventListener('click', async () => {
+                    const prestId = prestSelectEl ? Number(prestSelectEl.value) : null;
+                    if (!prestId) return;
+                    const list = await db.enlevements.where('prestataireId').equals(prestId).reverse().sortBy('date');
+                    const last = list && list[0];
+                    if (!last) {
+                        showToast('Aucune saisie precedente pour ce prestataire', 'info');
+                        return;
+                    }
+                    const fields = ['typeDechetId', 'modeTraitement', 'destinationNom', 'destinationSiret', 'transporteurNom', 'unite', 'contenant'];
+                    for (const name of fields) {
+                        const el = container.querySelector(`[name="${name}"]`);
+                        if (el && last[name] !== undefined && last[name] !== null && last[name] !== '') {
+                            el.value = String(last[name]);
+                        }
+                    }
+                    const tSel = container.querySelector('select[name="typeDechetId"]');
+                    if (tSel) tSel.dispatchEvent(new Event('change'));
+                    showToast('Saisie dupliquee');
+                });
+            }
+
             // Submit
             container.querySelector('#enl-form').addEventListener('submit', async (ev) => {
                 ev.preventDefault();
@@ -1918,6 +2346,48 @@
                 }
 
                 const savedId = await DB.saveEnlevement(data);
+
+                // Upload du BL (si present et non deja stocke) vers SharePoint
+                if (currentBL) {
+                    let blMeta;
+                    const alreadyUploaded = !!(currentBL.sharepointUrl && !currentBL.pendingUpload && (!currentBL.base64 || currentBL.base64 === ''));
+                    if (alreadyUploaded) {
+                        blMeta = { ...currentBL };
+                    } else {
+                        try {
+                            const annee = (data.date || new Date().toISOString()).slice(0, 4);
+                            const prestaSafe = _sanitizeFilenamePart(data.prestataireNom || 'inconnu');
+                            const ts = Date.now();
+                            const ext = (currentBL.name && currentBL.name.match(/\.[a-z0-9]+$/i)) ? currentBL.name.match(/\.[a-z0-9]+$/i)[0] : '';
+                            const baseSafe = _sanitizeFilenamePart((currentBL.name || 'bl').replace(/\.[^.]+$/, ''));
+                            const safeName = ts + '_' + baseSafe + ext;
+                            const filePath = `${APP_CONFIG.DATA_FOLDER_PATH}/BL/${annee}/${prestaSafe}/${safeName}`;
+                            const base64Data = _stripDataUrl(currentBL.base64 || '');
+                            const blob = _base64ToBlob(base64Data, currentBL.mimeType);
+                            const driveItem = await _uploadBinaryFile(filePath, blob, currentBL.mimeType);
+                            blMeta = {
+                                name: currentBL.name,
+                                mimeType: currentBL.mimeType,
+                                base64: '',
+                                sharepointUrl: driveItem.webUrl || '',
+                                sharepointPath: filePath,
+                                uploadedAt: new Date().toISOString(),
+                                pendingUpload: false
+                            };
+                        } catch (uploadErr) {
+                            console.warn('Upload BL echoue - conserve en local', uploadErr);
+                            blMeta = {
+                                name: currentBL.name,
+                                mimeType: currentBL.mimeType,
+                                base64: currentBL.base64 || '',
+                                sharepointUrl: '',
+                                pendingUpload: true
+                            };
+                        }
+                    }
+                    await DB.saveEnlevement({ ...data, id: savedId, bl: blMeta });
+                }
+
                 ActivityLog.log(isEdit ? 'edit_enlevement' : 'new_enlevement', { id: savedId });
                 if (typeof DataSync !== 'undefined') DataSync.markDirty();
 
